@@ -116,8 +116,8 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
         # input_tensor = core.imresize(gt_tensor, scale=1/scale_factor)
         # blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
         upsample_mode = config['model']['args']['upsample_mode']
-        input_tensor = F.interpolate(gt_tensor, scale=1/scale_factor, mode=upsample_mode)
-        blurred_tensor = F.interpolate(input_tensor, scale=scale_factor, mode=upsample_mode)
+        input_tensor = F.interpolate(gt_tensor, scale_factor=1/scale_factor, mode=upsample_mode)
+        blurred_tensor = F.interpolate(input_tensor, scale_factor=scale_factor, mode=upsample_mode)
 
         with torch.no_grad():
             output = model((input_tensor - 0.5) / 0.5, scale_factor)
