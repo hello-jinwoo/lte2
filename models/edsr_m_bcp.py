@@ -145,7 +145,8 @@ class EDSR(nn.Module):
         if self.args.no_upsampling:
             up_x = res
         else:
-            up_x = core.imresize(res, sizes=(round(h*scale_factor),round(w*scale_factor)))
+            # up_x = core.imresize(res, sizes=(round(h*scale_factor),round(w*scale_factor)))
+            up_x = core.imresize(res, sizes=size)
             # if type(self.args.upsample_mode) == str:
             #     if scale_factor == None:
             #         up_x = F.interpolate(res, 
