@@ -37,7 +37,7 @@ epoch_save: 100
 
 scale:
   mode: 'multi_arbitrary'
-  factor_range: [1, 4]
+  factor_range: [1, 16]
   
 
 is_resume : False
