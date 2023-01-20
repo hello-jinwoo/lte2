@@ -49,7 +49,7 @@ def pad_img(x, size_must_mode=8):
         pu = ph//2
         pd = ph - pu
 
-    pad = [pl, pr, pu, pd]
+    pad = (pl, pr, pu, pd)
     # print(h,w, pad)
     x = F.pad(x, pad=pad, mode='replicate')
 
