@@ -188,7 +188,7 @@ def train(train_loader, model, optimizer, epoch, config):
         # inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
         # gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
         upsample_mode = config['model']['args']['upsample_mode']
-        inp = F.interpolate(gt_img, size=(inp_size,inp_size), mode=)
+        inp = F.interpolate(gt_img, size=(inp_size,inp_size), mode=upsample_mode)
         gt_img = F.interpolate(gt_img, size=(round(inp_size*sf),round(inp_size*sf)), mode=upsample_mode)
 
         pred = model(inp, sf)
