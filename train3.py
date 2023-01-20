@@ -131,7 +131,9 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
                 mode='bicubic')
 
         with torch.no_grad():
-            output = model((input_tensor - 0.5) / 0.5, scale_factor=None, size=(new_h, new_w))
+            output = model(x=(input_tensor - 0.5) / 0.5, 
+                           scale_factor=None, 
+                           size=(new_h, new_w))
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
