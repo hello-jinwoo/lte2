@@ -115,9 +115,20 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
         _,_, new_h, new_w = gt_tensor.size()
         # input_tensor = core.imresize(gt_tensor, scale=1/scale_factor)
         # blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
-        upsample_mode = config['model']['args']['upsample_mode']
-        input_tensor = F.interpolate(gt_tensor, scale_factor=1/scale_factor, mode=upsample_mode)
-        blurred_tensor = F.interpolate(input_tensor, scale_factor=scale_factor, mode=upsample_mode)
+        if type(config['model']['args']['upsample_mode']) == str:
+            input_tensor = F.interpolate(gt_tensor, 
+                scale_factor=1/scale_factor, 
+                mode=config['model']['args']['upsample_mode'])
+            blurred_tensor = F.interpolate(input_tensor, 
+                scale_factor=scale_factor, 
+                mode=config['model']['args']['upsample_mode'])
+        else:
+            input_tensor = F.interpolate(gt_tensor, 
+                scale_factor=1/scale_factor, 
+                mode='bicubic')
+            blurred_tensor = F.interpolate(input_tensor, 
+                scale_factor=scale_factor, 
+                mode='bicubic')
 
         with torch.no_grad():
             output = model((input_tensor - 0.5) / 0.5, scale_factor)
@@ -187,9 +198,21 @@ def train(train_loader, model, optimizer, epoch, config):
         inp_size = config.get('train_dataset')['wrapper']['args']['inp_size']
         # inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
         # gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
-        upsample_mode = config['model']['args']['upsample_mode']
-        inp = F.interpolate(gt_img, size=(inp_size,inp_size), mode=upsample_mode)
-        gt_img = F.interpolate(gt_img, size=(round(inp_size*sf),round(inp_size*sf)), mode=upsample_mode)
+        if type(config['model']['args']['upsample_mode']) == str:
+            inp = F.interpolate(gt_img, 
+                size=(inp_size,inp_size), 
+                mode=config['model']['args']['upsample_mode'])
+            gt_img = F.interpolate(gt_img, 
+                size=(round(inp_size*sf),round(inp_size*sf)), 
+                mode=config['model']['args']['upsample_mode'])
+        else:
+            inp = F.interpolate(gt_img, 
+                size=(inp_size,inp_size), 
+                mode='bicubic')
+            gt_img = F.interpolate(gt_img, 
+                size=(round(inp_size*sf),round(inp_size*sf)), 
+                mode='bicubic')
+        
 
         pred = model(inp, sf)
 
