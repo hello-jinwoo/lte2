@@ -12,15 +12,14 @@ import torch.nn as nn
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
+import torch.nn.functional as F
 
 import datasets
 import models
 import utils
-from test import eval_psnr
-from test import batched_predict
 
 import random
-from bicubic_pytorch import core
+# from bicubic_pytorch import core
 
 
 # from utils import to_pixel_samples
@@ -90,7 +89,7 @@ def prepare_training():
 
 
 
-def eval(model, data_name, save_dir, scale_factor=4):
+def eval(model, data_name, save_dir, scale_factor=4, config):
     model.eval()
     test_path = './load/' + data_name + '/HR'
 
@@ -114,8 +113,11 @@ def eval(model, data_name, save_dir, scale_factor=4):
         gt_tensor = utils.numpy2tensor(gt).cuda()
         gt_tensor, pad = utils.pad_img(gt_tensor, 24*scale_factor)#self.args.size_must_mode*self.args.scale)
         _,_, new_h, new_w = gt_tensor.size()
-        input_tensor = core.imresize(gt_tensor, scale=1/scale_factor)
-        blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
+        # input_tensor = core.imresize(gt_tensor, scale=1/scale_factor)
+        # blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
+        upsample_mode = config['model']['args']['upsample_mode']
+        input_tensor = F.interpolate(gt_tensor, scale=1/scale_factor, mode=upsample_mode)
+        blurred_tensor = F.interpolate(input_tensor, scale=scale_factor, mode=upsample_mode)
 
         with torch.no_grad():
             output = model((input_tensor - 0.5) / 0.5, scale_factor)
@@ -183,8 +185,11 @@ def train(train_loader, model, optimizer, epoch, config):
 
         # with torch.no_grad():
         inp_size = config.get('train_dataset')['wrapper']['args']['inp_size']
-        inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
-        gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
+        # inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
+        # gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
+        upsample_mode = config['model']['args']['upsample_mode']
+        inp = F.interpolate(gt_img, size=(inp_size,inp_size), mode=)
+        gt_img = F.interpolate(gt_img, size=(round(inp_size*sf),round(inp_size*sf)), mode=upsample_mode)
 
         pred = model(inp, sf)
 
@@ -279,8 +284,8 @@ def main(config_, save_path):
             model.eval()
 
             for sf in scale_factors:
-                val_res_set14 = eval(model, 'Set14', save_path, scale_factor=sf)
-                val_res_set5 = eval(model, 'Set5', save_path, scale_factor=sf)
+                val_res_set14 = eval(model, 'Set14', save_path, scale_factor=sf, config=config)
+                val_res_set5 = eval(model, 'Set5', save_path, scale_factor=sf, config=config)
                 if sf == 4:
                     val_sf4 = val_res_set14
                 log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))

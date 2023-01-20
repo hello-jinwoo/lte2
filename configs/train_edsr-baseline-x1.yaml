@@ -21,6 +21,7 @@ model:
   name: edsr-baseline-m
   args:
     scale: 4
+    upsample_mode: 'bicubic'
 
 optimizer:
   name: adam

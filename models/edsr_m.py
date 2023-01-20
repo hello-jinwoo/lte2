@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from bicubic_pytorch import core
+# from bicubic_pytorch import core
 
 from models import register
 
@@ -145,7 +145,8 @@ class EDSR(nn.Module):
         if self.args.no_upsampling:
             x = res
         else:
-            up_x = core.imresize(res, sizes=(round(h*scale_factor),round(w*scale_factor)))
+            # up_x = core.imresize(res, sizes=(round(h*scale_factor),round(w*scale_factor)))
+            up_x = F.interpolate(res, size=(round(h*scale_factor),round(w*scale_factor)), mode=args.upsample_mode)
             x = self.tail(up_x)
             # x = self.tail(res)
         #x = self.add_mean(x)
@@ -172,8 +173,8 @@ class EDSR(nn.Module):
 
 
 @register('edsr-baseline-m')
-def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1,
-                       scale=2, no_upsampling=False, rgb_range=1):
+def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
+                       no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -181,6 +182,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1,
 
     args.scale = [scale]
     args.no_upsampling = no_upsampling
+    args.upsample_mode = upsample_mode
 
     args.rgb_range = rgb_range
     args.n_colors = 3
@@ -188,8 +190,8 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1,
 
 
 @register('edsr-m')
-def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1,
-              scale=2, no_upsampling=False, rgb_range=1):
+def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
+              no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -197,6 +199,7 @@ def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1,
 
     args.scale = [scale]
     args.no_upsampling = no_upsampling
+    args.upsample_mode = upsample_mode
 
     args.rgb_range = rgb_range
     args.n_colors = 3
