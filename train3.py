@@ -280,7 +280,7 @@ def main(config_, save_path):
             else:
                 model_ = model
 
-            scale_factors = [2,3,4,6,8]
+            scale_factors = [2, 2.5, 3, 3.5, 4, 6, 12]
             model.eval()
 
             for sf in scale_factors:
