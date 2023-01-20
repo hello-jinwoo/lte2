@@ -146,7 +146,7 @@ class EDSR(nn.Module):
             x = res
         else:
             # up_x = core.imresize(res, sizes=(round(h*scale_factor),round(w*scale_factor)))
-            up_x = F.interpolate(res, size=(round(h*scale_factor),round(w*scale_factor)), mode=args.upsample_mode)
+            up_x = F.interpolate(res, size=(round(h*scale_factor),round(w*scale_factor)), mode=self.args.upsample_mode)
             x = self.tail(up_x)
             # x = self.tail(res)
         #x = self.add_mean(x)
