@@ -148,15 +148,15 @@ class EDSR(nn.Module):
             # up_x = core.imresize(res, sizes=(round(h*scale_factor),round(w*scale_factor)))
             # up_x = F.interpolate(res, size=(round(h*scale_factor),round(w*scale_factor)), mode=self.args.upsample_mode)
             if type(self.args.upsample_mode) == str:
-                res = F.interpolate(res, scale_factor=scale_factor, mode=self.args.upsample_mode)
+                up_x = F.interpolate(res, scale_factor=scale_factor, mode=self.args.upsample_mode)
             elif type(self.args.upsample_mode) == list:
                 tmp_res = F.interpolate(res, scale_factor=scale_factor, mode=self.args.upsample_mode[0])
                 for m in self.args.upsample_mode[1:]:
                     tmp_res = tmp_res + F.interpolate(res, scale_factor=scale_factor, mode=m)
                 tmp_res = tmp_res / len(self.args.upsample_mode)
-                res = tmp_res
+                up_x = tmp_res
             else:
-                res = F.interpolate(res, scale_factor=scale_factor, mode='bicubic')
+                up_x = F.interpolate(res, scale_factor=scale_factor, mode='bicubic')
 
             x = self.tail(up_x)
             # x = self.tail(res)
