@@ -89,7 +89,7 @@ def prepare_training():
 
 
 
-def eval(model, data_name, save_dir, scale_factor=4, config):
+def eval(model, data_name, save_dir, scale_factor=4, config=None):
     model.eval()
     test_path = './load/' + data_name + '/HR'
 
