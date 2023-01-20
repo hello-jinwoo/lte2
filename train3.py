@@ -304,7 +304,10 @@ def main(config_, save_path):
                 model_ = model
 
             if config['scale']['mode'] == 'fixed':
-                scale_factors = [1, 2, 3, 4]
+                if config['scale']['factor'] == 1:
+                    scale_factors = [1, 1.25, 1.5, 1.75, 2, 3, 4]
+                else:
+                    scale_factors = [2, 3, 4]
             else:
                 scale_factors = [2, 2.5, 3, 3.5, 4, 6, 12]
             model.eval()
