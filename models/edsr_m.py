@@ -133,7 +133,7 @@ class EDSR(nn.Module):
                                                     nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
             
 
-    def forward(self, x, scale_factor):
+    def forward(self, x, scale_factor=None, size=None): 
         #x = self.sub_mean(x)
         x = self.head(x)
 
@@ -143,20 +143,44 @@ class EDSR(nn.Module):
         _,_,h,w = x.size()
 
         if self.args.no_upsampling:
-            x = res
+            up_x = res
         else:
             # up_x = core.imresize(res, sizes=(round(h*scale_factor),round(w*scale_factor)))
             # up_x = F.interpolate(res, size=(round(h*scale_factor),round(w*scale_factor)), mode=self.args.upsample_mode)
             if type(self.args.upsample_mode) == str:
-                up_x = F.interpolate(res, scale_factor=scale_factor, mode=self.args.upsample_mode)
+                if scale_factor == None:
+                    up_x = F.interpolate(res, 
+                        size=size, 
+                        mode=self.args.upsample_mode)
+                else:
+                    up_x = F.interpolate(res, 
+                        scale_factor=scale_factor, 
+                        mode=self.args.upsample_mode)
             elif type(self.args.upsample_mode) == list:
-                tmp_res = F.interpolate(res, scale_factor=scale_factor, mode=self.args.upsample_mode[0])
+                if scale_factor == None:
+                    tmp_res = F.interpolate(res, 
+                        size=size, 
+                        mode=self.args.upsample_mode[0])
+                else:
+                    tmp_res = F.interpolate(res, 
+                        scale_factor=scale_factor, 
+                        mode=self.args.upsample_mode[0])
                 for m in self.args.upsample_mode[1:]:
-                    tmp_res = tmp_res + F.interpolate(res, scale_factor=scale_factor, mode=m)
+                    if scale_factor == None:
+                        tmp_res = tmp_res + F.interpolate(res, 
+                                                          size=size, 
+                                                          mode=m)
+                    else:
+                        tmp_res = tmp_res + F.interpolate(res, 
+                                                          scale_factor=scale_factor, 
+                                                          mode=m)
                 tmp_res = tmp_res / len(self.args.upsample_mode)
                 up_x = tmp_res
             else:
-                up_x = F.interpolate(res, scale_factor=scale_factor, mode='bicubic')
+                if scale_factor == None:
+                    up_x = F.interpolate(res, size=size, mode='bicubic')
+                else:
+                    up_x = F.interpolate(res, scale_factor=scale_factor, mode='bicubic')
 
             x = self.tail(up_x)
             # x = self.tail(res)
