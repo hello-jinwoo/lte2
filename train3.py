@@ -280,7 +280,10 @@ def main(config_, save_path):
             else:
                 model_ = model
 
-            scale_factors = [2, 2.5, 3, 3.5, 4, 6, 12]
+            if config['scale']['mode'] == 'fixed':
+                scale_factors = [1, 2, 3, 4]
+            else:
+                scale_factors = [2, 2.5, 3, 3.5, 4, 6, 12]
             model.eval()
 
             for sf in scale_factors:
