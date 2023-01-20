@@ -92,9 +92,9 @@ def prepare_training():
 
 def eval(model, data_name, save_dir, scale_factor=4):
     model.eval()
-    test_path = './datasets/' + data_name 
+    test_path = './load/' + data_name + '/HR'
 
-    gt_images = sorted(glob.glob(test_path + '/*.bmp'))
+    gt_images = sorted(glob.glob(test_path + '/*.png'))
 
     save_path = os.path.join(save_dir,  data_name)
     os.makedirs(save_path, exist_ok=True)

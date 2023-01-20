@@ -2,7 +2,7 @@ train_dataset:
   dataset:
     name: image-folder
     args:
-      root_path: ./datasets/DIV2K_train_HR
+      root_path: ./load/DIV2K_train_HR
       repeat: 20
       cache: in_memory
   wrapper:
@@ -37,6 +37,6 @@ epoch_save: 100
 scale:
   mode: 'fixed'
   factor: 1
-  
+
 is_resume : False
-resume: ./save/_train_edsr-baseline-liif/epoch-last.pth
+resume: ./save/_train_edsr-baseline-x1/epoch-last.pth
