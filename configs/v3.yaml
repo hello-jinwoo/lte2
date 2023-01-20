@@ -34,6 +34,10 @@ multi_step_lr:
 epoch_val: 5
 epoch_save: 100
 
-mode : 0
+scale:
+  mode: 'multi_arbitrary'
+  factor_range: [1, 4]
+  
+
 is_resume : False
 resume: ./save/_train_edsr-baseline-liif/epoch-last.pth
