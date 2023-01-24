@@ -133,7 +133,7 @@ class EDSR(nn.Module):
                                                     nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
             
 
-    def forward(self, x, scale_factor=None, size=None): 
+    def forward(self, x, scale_factor=None, size=None, mode='test'): 
         #x = self.sub_mean(x)
         x = self.head(x)
 
