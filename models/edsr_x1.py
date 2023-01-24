@@ -159,17 +159,6 @@ class EDSR(nn.Module):
                                                     nn.LeakyReLU(inplace=True), 
                                                     nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
             
-        self.reproduce_networks = nn.ModuleList([
-            nn.Sequential(
-                nn.Conv2d(n_feats, n_feats, 3, 1, 1),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(n_feats, n_feats, 3, 1, 1)
-            ) for _ in range(len(args.reproduce_layers))
-        ])
-
-        # self.scale_layers = nn.ModuleList([
-        #     ScaleModule(n_feats) for _ in range(len(args.reproduce_layers))
-        # ])
 
     def imresize(self, x, scale_factor=None, size=None):
         if type(self.args.upsample_mode) == str:
