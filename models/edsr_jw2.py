@@ -165,9 +165,9 @@ class EDSR(nn.Module):
         n_upsample = len(args.upsample_mode)
         self.reproduce_networks = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(n_feats * n_upsample, n_feats, 3, 1, 1), # 
+                nn.Conv2d(n_feats * n_upsample, n_feats_target, 3, 1, 1), # 
                 nn.ReLU(inplace=True),
-                nn.Conv2d(n_feats, n_feats, 3, 1, 1)
+                nn.Conv2d(n_feats_target, n_feats_target, 3, 1, 1)
             ) for _ in range(len(args.reproduce_layers))
         ])
 
@@ -290,12 +290,13 @@ class EDSR(nn.Module):
 
 
 @register('edsr-baseline-jw2')
-def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
+def make_edsr_baseline(n_resblocks=16, n_feats=48, n_feats_target=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        reproduce_layers=[3,7,11,15,-1]):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
+    args.n_feats_target = n_feats_target
     args.res_scale = res_scale
 
     args.scale = [scale]
