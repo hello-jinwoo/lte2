@@ -235,7 +235,7 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
 
         pred, feat = model(inp, scale_factor=None, size=(round(inp_size*sf),round(inp_size*sf)), mode='train')
-        pred_t, feat_t = model(gt_img, scale_factor=1, mode='train')
+        pred_t, feat_t = model_t(gt_img, scale_factor=1, mode='train')
   
         loss_rgb = loss_fn_rgb(pred, gt_img)
         loss_feat = 0
