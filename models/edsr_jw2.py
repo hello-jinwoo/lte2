@@ -159,11 +159,20 @@ class EDSR(nn.Module):
             self.out_dim = args.n_colors
             # define tail module
             
-            self.tail = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
+            self.tail = nn.Sequential(nn.Conv2d(n_feats_target, n_feats_target, 3, 1, 1),
                                                     nn.LeakyReLU(inplace=True), 
-                                                    nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
+                                                    nn.Conv2d(n_feats_target, self.out_dim, 3, 1, 1))
         
+        # TODO: naming?
         n_upsample = len(args.upsample_mode)
+        self.channel_sync =  nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(n_feats * n_upsample, n_feats, 1, 1, 0),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(n_feats, n_feats, 1, 1, 0)
+            ) for _ in range(len(args.reproduce_layers))
+        ])
+        
         self.reproduce_networks = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(n_feats * n_upsample, n_feats_target, 3, 1, 1), # 
@@ -228,6 +237,7 @@ class EDSR(nn.Module):
                 up_res = self.imresize(x=res,
                                     scale_factor=scale_factor,
                                     size=size)
+                
                 net_idx = self.args.reproduce_layers.index(i)
                 up_res = self.reproduce_networks[net_idx](up_res)
 
@@ -238,10 +248,13 @@ class EDSR(nn.Module):
                 if scale_factor == None:
                     new_res = self.imresize(x=res,
                                             size=(h, w))
+                    new_res = self.channel_sync[net_idx](new_res)
                 elif size == None:
                     d_scale_factor = 1 / scale_factor
                     new_res = self.imresize(x=res,
                                             scale_factor=1 / scale_factor)
+                    new_res = self.channel_sync[net_idx](new_res)
+
                 
                 res += new_res
 
