@@ -102,6 +102,9 @@ def prepare_teacher_model():
         #     lr_scheduler = MultiStepLR(optimizer, **config['multi_step_lr'])
         # for _ in range(epoch_start - 1):
         #     lr_scheduler.step()
+
+        log('model: #params={}'.format(utils.compute_num_params(model, text=True)))
+        return model
     else:
         model = models.make(config['model_t']).cuda()
         optimizer = utils.make_optimizer(
@@ -112,8 +115,8 @@ def prepare_teacher_model():
         else:
             lr_scheduler = MultiStepLR(optimizer, **config['multi_step_lr'])
 
-    log('model: #params={}'.format(utils.compute_num_params(model, text=True)))
-    return model, optimizer, epoch_start, lr_scheduler
+        log('model: #params={}'.format(utils.compute_num_params(model, text=True)))
+        return model, optimizer, epoch_start, lr_scheduler
 
 
 def eval(model, data_name, save_dir, scale_factor=4, config=None):
@@ -281,7 +284,7 @@ def main(config_, save_path):
     model, optimizer, epoch_start, lr_scheduler = prepare_training()
 
     if config['model_t']['load_dir'] != '':
-        model_t, _, _, _ = prepare_teacher_model()
+        model_t = prepare_teacher_model()
     else:
         model_t, optimizer_t, _, lr_scheduler_t = prepare_teacher_model()
 
