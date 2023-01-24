@@ -25,6 +25,9 @@ model:
 model_t:
   name: edsr-baseline
   load_dir: ''
+  args:
+    scale: 1
+    upsample_mode: 'bicubic'
 
 optimizer:
   name: adam
