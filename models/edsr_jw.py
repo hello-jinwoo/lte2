@@ -233,12 +233,13 @@ class EDSR(nn.Module):
 
                 # downsample
                 if scale_factor == None:
-                    d_size = (h, w)
+                    new_res = self.imresize(x=res,
+                                            size=(h, w))
                 elif size == None:
                     d_scale_factor = 1 / scale_factor
-                new_res = self.imresize(x=res,
-                                        scale_factor=d_scale_factor,
-                                        size=d_size)
+                    new_res = self.imresize(x=res,
+                                            scale_factor=1 / scale_factor)
+                
                 res += new_res
 
         res += x
