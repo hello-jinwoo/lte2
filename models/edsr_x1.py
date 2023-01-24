@@ -225,7 +225,7 @@ class EDSR(nn.Module):
         res += x
 
         up_x = res
-        if -1 in self.args.reproduce_layers and mode == 'train'::
+        if -1 in self.args.reproduce_layers and mode == 'train':
             reproduce_features.append(up_x)
         x = self.tail(up_x)
 
