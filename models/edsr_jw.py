@@ -252,9 +252,10 @@ class EDSR(nn.Module):
                                  scale_factor=scale_factor, 
                                  size=size)
 
-            if -1 in self.args.reproduce_layers and mode == 'train':
+            if -1 in self.args.reproduce_layers:
                 up_x = self.reproduce_networks[-1](up_x)
-                reproduce_features.append(up_x)
+                if mode == 'train':
+                    reproduce_features.append(up_x)
 
             x = self.tail(up_x)
             # x = self.tail(res)
