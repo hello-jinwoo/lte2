@@ -235,7 +235,12 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         pred_t, feat_t = model(gt_img, scale_factor=1, mode='train')
   
         loss_rgb = loss_fn_rgb(pred, gt_img)
-        loss_feat = loss_fn_feat(feat, feat_t)
+        loss_feat = 0
+        for i in range(len(feat)):
+            loss_feat += loss_fn_feat(feat[i], feat_t[i].detach().clone())
+        loss_feat /= len(feat)
+        # TODO: weighted sum?
+        total_loss = loss_rgb + loss_feat
 
         psnr = metric_fn(pred, gt_img)
         psnr_t = metric_fn(pred_t, gt_img)
@@ -250,8 +255,8 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         train_loss_rgb.add(loss_rgb.item())
 
         optimizer.zero_grad()
-        loss_rgb.backward()
-        loss_feat.backward()
+        # loss.backward()
+        total_loss.backward()
         optimizer.step()
 
         pred = None; loss_rgb = None
