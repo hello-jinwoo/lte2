@@ -22,9 +22,9 @@ model:
   args:
     scale: 4
     upsample_mode: 'bicubic'
-  teacher:
-    load_dir: ''
-
+model_t:
+  name: edsr-baseline
+  load_dir: ''
 
 optimizer:
   name: adam

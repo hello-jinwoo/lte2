@@ -90,8 +90,8 @@ def prepare_training():
 
 def prepare_teacher_model():
 #     if config.get('resume') is not None:
-    if config['model']['teacher']['load_dir'] != '':
-        sv_file = torch.load(config['model']['teacher']['load_dir'])
+    if config['model_t']['load_dir'] != '':
+        sv_file = torch.load(config['model_t']['load_dir'])
         model = models.make(sv_file['model'], load_sd=True).cuda()
         # optimizer = utils.make_optimizer(
         #     model.parameters(), sv_file['optimizer'], load_sd=True)
@@ -103,7 +103,7 @@ def prepare_teacher_model():
         # for _ in range(epoch_start - 1):
         #     lr_scheduler.step()
     else:
-        model = models.make(config['model']).cuda()
+        model = models.make(config['model_t']).cuda()
         optimizer = utils.make_optimizer(
             model.parameters(), config['optimizer'])
         epoch_start = 1
@@ -185,7 +185,7 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
     model.train()
     # TODO: loss combination?
     loss_fn_rgb = nn.L1Loss()
-    loss_fn_feat = nn.L2Loss()
+    loss_fn_feat = nn.MSELoss()
     train_loss_rgb = utils.Averager()
     train_loss_feat = utils.Averager()
     metric_fn = utils.calc_psnr
@@ -275,7 +275,7 @@ def main(config_, save_path):
 
     model, optimizer, epoch_start, lr_scheduler = prepare_training()
 
-    if config['model']['teacher']['load_dir'] != '':
+    if config['model_t']['load_dir'] != '':
         model_t, _, _, _ = prepare_teacher_model()
     else:
         model_t, optimizer_t, _, lr_scheduler_t = prepare_teacher_model()
