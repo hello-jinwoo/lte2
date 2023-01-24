@@ -162,7 +162,7 @@ class EDSR(nn.Module):
                                                     nn.LeakyReLU(inplace=True), 
                                                     nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
         
-        n_upsample = len(args['model']['args']['upsample_mode'])
+        n_upsample = len(args.upsample_mode)
         self.reproduce_networks = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(n_feats * n_upsample, n_feats, 3, 1, 1), # 
