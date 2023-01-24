@@ -28,6 +28,14 @@ model_t:
   args:
     scale: 1
     upsample_mode: 'bicubic'
+loss:
+  rgb: 
+    type: 'l1'
+    weight: 1.0
+  feat: 
+    type: 'mse' # 'l2' == 'mse'
+    weight: 0.2
+
 
 optimizer:
   name: adam

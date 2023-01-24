@@ -103,7 +103,7 @@ def prepare_teacher_model():
         # for _ in range(epoch_start - 1):
         #     lr_scheduler.step()
 
-        log('model: #params={}'.format(utils.compute_num_params(model, text=True)))
+        log('model_t: #params={}'.format(utils.compute_num_params(model, text=True)))
         return model
     else:
         model = models.make(config['model_t']).cuda()
@@ -115,7 +115,7 @@ def prepare_teacher_model():
         else:
             lr_scheduler = MultiStepLR(optimizer, **config['multi_step_lr'])
 
-        log('model: #params={}'.format(utils.compute_num_params(model, text=True)))
+        log('model_t: #params={}'.format(utils.compute_num_params(model, text=True)))
         return model, optimizer, epoch_start, lr_scheduler
 
 
@@ -242,8 +242,9 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         for i in range(len(feat)):
             loss_feat += loss_fn_feat(feat[i], feat_t[i].detach().clone())
         loss_feat /= len(feat)
-        # TODO: weighted sum?
-        total_loss = loss_rgb + loss_feat
+        
+        total_loss = loss_rgb * config['loss']['rgb']['weight'] +\
+                     loss_feat * config['loss']['feat']['weight']
 
         psnr = metric_fn(pred, gt_img)
         psnr_t = metric_fn(pred_t, gt_img)
@@ -307,16 +308,17 @@ def main(config_, save_path):
 
         writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
 
-        train_loss, train_loss_feat = train(train_loader, 
-                                            model, 
-                                            model_t, 
-                                            optimizer, 
-                                            epoch, 
-                                            config)
+        train_loss_rgb, train_loss_feat = train(train_loader, 
+                                                model, 
+                                                model_t, 
+                                                optimizer, 
+                                                epoch, 
+                                                config)
         if lr_scheduler is not None:
             lr_scheduler.step()
 
-        log_info.append('train: loss={:.4f}'.format(train_loss))
+        log_info.append('train: loss_rgb={:.4f}'.format(train_loss_rgb))
+        log_info.append('train: loss_feat={:.4f}'.format(train_loss_feat))
         log_info.append('lr={:.4e}'.format(optimizer.param_groups[0]['lr']))
 #         writer.add_scalars('loss', {'train': train_loss}, epoch)
 
