@@ -207,7 +207,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-light')
+@register('edsr-light-m')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
