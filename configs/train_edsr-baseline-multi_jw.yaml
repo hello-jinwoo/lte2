@@ -23,7 +23,7 @@ model:
     scale: 4
     upsample_mode: 'bicubic'
 model_t:
-  name: edsr-baseline
+  name: edsr-baseline-m
   load_dir: ''
   args:
     scale: 1
