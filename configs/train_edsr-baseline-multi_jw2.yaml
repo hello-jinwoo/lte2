@@ -18,10 +18,10 @@ data_norm:
   gt: {sub: [0.5], div: [0.5]}
 
 model:
-  name: edsr-baseline-jw
+  name: edsr-baseline-jw2
   args:
     scale: 4
-    upsample_mode: 'bicubic'
+    upsample_mode: ['bicubic', 'bilinear', 'nearest']
 model_t:
   name: edsr-baseline-m
   load_dir: 'save/train_edsr-baseline-x1/epoch-last.pth'
@@ -55,4 +55,4 @@ scale:
   
 
 is_resume : False
-resume: ./save/_train_edsr-baseline-multi_jw/epoch-last.pth
+resume: ./save/_train_edsr-baseline-multi_jw2/epoch-last.pth
