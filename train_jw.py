@@ -260,6 +260,7 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         iteration += 1
         
         train_loss_rgb.add(loss_rgb.item())
+        train_loss_feat.add(loss_feat.item())
 
         optimizer.zero_grad()
         # loss.backward()
