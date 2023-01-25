@@ -324,7 +324,7 @@ def main(config_, save_path):
 
 
             model.train()
-            if val_sf4 > max_val_v:
+            if 4 in scale_factors and val_sf4 > max_val_v:
                 max_val_v = val_sf4
                 torch.save(sv_file, os.path.join(save_path, 'epoch-best.pth'))
 
