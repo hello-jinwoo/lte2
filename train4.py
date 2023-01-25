@@ -324,9 +324,10 @@ def main(config_, save_path):
 
 
             model.train()
-            if 4 in scale_factors and val_sf4 > max_val_v:
-                max_val_v = val_sf4
-                torch.save(sv_file, os.path.join(save_path, 'epoch-best.pth'))
+            if 4 in scale_factors:
+                if val_sf4 > max_val_v:
+                    max_val_v = val_sf4
+                    torch.save(sv_file, os.path.join(save_path, 'epoch-best.pth'))
 
         t = timer.t()
         prog = (epoch - epoch_start + 1) / (epoch_max - epoch_start + 1)
