@@ -167,15 +167,17 @@ class EDSR(nn.Module):
         n_upsample = len(args.upsample_mode)
         self.channel_sync =  nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(n_feats * n_upsample, n_feats, 1, 1, 0),
+                nn.Conv2d(n_feats_target * n_upsample, n_feats, 1, 1, 0),
                 nn.ReLU(inplace=True),
-                nn.Conv2d(n_feats, n_feats, 1, 1, 0)
+                nn.Conv2d(n_feats, n_feats, 1, 1, 0),
             ) for _ in range(len(args.reproduce_layers))
         ])
         
         self.reproduce_networks = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(n_feats * n_upsample, n_feats_target, 3, 1, 1), # 
+                nn.Conv2d(n_feats * n_upsample, n_feats, 3, 1, 1), # 
+                nn.ReLU(inplace=True),
+                nn.Conv2d(n_feats, n_feats_target, 3, 1, 1),
                 nn.ReLU(inplace=True),
                 nn.Conv2d(n_feats_target, n_feats_target, 3, 1, 1)
             ) for _ in range(len(args.reproduce_layers))
@@ -304,7 +306,7 @@ class EDSR(nn.Module):
 
 
 @register('edsr-baseline-jw2')
-def make_edsr_baseline(n_resblocks=16, n_feats=48, n_feats_target=64, res_scale=1, scale=2, 
+def make_edsr_baseline(n_resblocks=16, n_feats=48, n_feats_target=32, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        reproduce_layers=[3,7,11,15,-1]):
     args = Namespace()
@@ -326,12 +328,13 @@ def make_edsr_baseline(n_resblocks=16, n_feats=48, n_feats_target=64, res_scale=
 
 
 @register('edsr-jw2')
-def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
+def make_edsr(n_resblocks=32, n_feats=256, n_feats_target=32, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               reproduce_layers=[7,15,23,31,-1]):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
+    args.n_feats_target = n_feats_target
     args.res_scale = res_scale
 
     args.scale = [scale]

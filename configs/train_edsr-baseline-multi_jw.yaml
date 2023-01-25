@@ -22,6 +22,8 @@ model:
   args:
     scale: 4
     upsample_mode: 'bicubic'
+    n_feats: 64
+    n_feats_target: 32
 model_t:
   name: edsr-baseline-m
   load_dir: 'save/train_edsr-light-x1/epoch-last.pth'
