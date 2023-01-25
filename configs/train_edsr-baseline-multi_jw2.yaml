@@ -24,7 +24,7 @@ model:
     upsample_mode: ['bicubic', 'bilinear', 'nearest']
 model_t:
   name: edsr-baseline-m
-  load_dir: 'save/train_edsr-baseline-x1/epoch-last.pth'
+  load_dir: 'save/train_edsr-light-x1/epoch-last.pth'
   args:
     scale: 1
     upsample_mode: 'bicubic'
