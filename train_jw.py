@@ -239,9 +239,12 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
   
         loss_rgb = loss_fn_rgb(pred, gt_img)
         loss_feat = 0
-        for i in range(len(feat)):
-            loss_feat += loss_fn_feat(feat[i], feat_t[i].detach().clone())
-        loss_feat /= len(feat)
+        len_feat = len(feat)
+        if -1 in config['model']['args']['reproduce_layers']:
+            loss_feat += loss_fn_feat(feat[-1], feat_t[-1].detach().clone())
+            len_feat -= 1
+        for i in range(len_feat):
+            loss_feat += (1 / len_feat) * loss_fn_feat(feat[i], feat_t[i].detach().clone())
         
         total_loss = loss_rgb * config['loss']['rgb']['weight'] +\
                      loss_feat * config['loss']['feat']['weight']
@@ -251,7 +254,7 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         
         # tensorboard
         writer.add_scalars('loss_rgb', {'train': loss_rgb.item()}, (epoch-1)*iter_per_epoch + iteration)
-        writer.add_scalars('loss_feat', {'train': loss_feat.item()}, (epoch-1)*iter_per_epoch + iteration)
+        writer.add_scalars('loss_feat(x1000)', {'train': loss_feat.item() * 1000}, (epoch-1)*iter_per_epoch + iteration)
         writer.add_scalars('psnr', {'train': psnr}, (epoch-1)*iter_per_epoch + iteration)
         writer.add_scalars('psnr_t', {'train': psnr_t}, (epoch-1)*iter_per_epoch + iteration)
         iteration += 1
