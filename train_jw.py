@@ -321,7 +321,7 @@ def main(config_, save_path):
             lr_scheduler.step()
 
         log_info.append('train: loss_rgb={:.4f}'.format(train_loss_rgb))
-        log_info.append('train: loss_feat={:.4f}'.format(train_loss_feat))
+        log_info.append('train: loss_feat(x1000)={:.4f}'.format(train_loss_feat * 1000))
         log_info.append('lr={:.4e}'.format(optimizer.param_groups[0]['lr']))
 #         writer.add_scalars('loss', {'train': train_loss}, epoch)
 
