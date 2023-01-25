@@ -307,7 +307,8 @@ def main(config_, save_path):
 
             if config['scale']['mode'] == 'fixed':
                 if config['scale']['factor'] == 1:
-                    scale_factors = [1, 1.25, 1.5, 1.75, 2, 3, 4]
+                    # scale_factors = [1, 1.25, 1.5, 1.75, 2, 3, 4]
+                    scale_factors = [1.]
                 else:
                     scale_factors = [2, 3, 4]
             else:
