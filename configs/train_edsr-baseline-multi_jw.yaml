@@ -24,12 +24,14 @@ model:
     upsample_mode: 'bicubic'
     n_feats: 64
     n_feats_target: 32
+    reproduce_layers: [3, 7, 11, 15, -1]
 model_t:
   name: edsr-baseline-m
   load_dir: 'save/train_edsr-light-x1/epoch-last.pth'
   args:
     scale: 1
     upsample_mode: 'bicubic'
+    reproduce_layers: [3, 7, 11, 15, -1]
 loss:
   rgb: 
     type: 'l1'
@@ -48,7 +50,7 @@ multi_step_lr:
   milestones: [200, 400, 600, 800]
   gamma: 0.5
 
-epoch_val: 5
+epoch_val: 1
 epoch_save: 100
 
 scale:
