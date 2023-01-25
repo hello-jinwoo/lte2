@@ -1,5 +1,7 @@
 from .models import register, make
-from . import edsr, rdn, rcan, swinir, edsr_m, edsr_m_bcp, edsr_jw, edsr_jw2, edsr_x1
+from . import edsr, rdn, rcan, swinir, edsr_m, edsr_m_bcp, edsr_x1
 from . import mlp
 
 from . import misc, liif, lte, ltep
+
+from . import edsr_jw, edsr_jw2, edsr_jw3
