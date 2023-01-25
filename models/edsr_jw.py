@@ -244,13 +244,15 @@ class EDSR(nn.Module):
                     reproduce_features.append(up_res)
 
                 # downsample
-                if scale_factor == None:
-                    new_res = self.imresize(x=res,
-                                            size=(h, w))
-                elif size == None:
-                    d_scale_factor = 1 / scale_factor
-                    new_res = self.imresize(x=res,
-                                            scale_factor=1 / scale_factor)
+                new_res = self.imresize(x=up_res,
+                                        size=(h, w))
+                # if size != None:
+                #     new_res = self.imresize(x=up_res,
+                #                             size=(h, w))
+                # elif scale_factor != None:
+                #     d_scale_factor = 1 / scale_factor
+                #     new_res = self.imresize(x=up_res,
+                #                             scale_factor=1 / scale_factor)
 
                 new_res = self.channel_sync[net_idx](new_res)
                 
