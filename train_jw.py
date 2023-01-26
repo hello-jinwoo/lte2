@@ -239,12 +239,10 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
   
         loss_rgb = loss_fn_rgb(pred, gt_img)
         loss_feat = 0
-        len_feat = len(feat)
-        if -1 in config['model']['args']['reproduce_layers']:
-            loss_feat += loss_fn_feat(feat[-1], feat_t[-1].detach().clone())
-            len_feat -= 1
-        for i in range(len_feat):
-            loss_feat += (1 / len_feat) * loss_fn_feat(feat[i], feat_t[i].detach().clone())
+        
+        for i in range(len_feat = len(feat)):
+            loss_feat += loss_fn_feat(feat[i], feat_t[i].detach().clone())
+        loss_feat /= len(feat)
         
         total_loss = loss_rgb * config['loss']['rgb']['weight'] +\
                      loss_feat * config['loss']['feat']['weight']

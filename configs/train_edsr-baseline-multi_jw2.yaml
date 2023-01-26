@@ -38,7 +38,7 @@ loss:
     weight: 1.0
   feat: 
     type: 'mse' # 'l2' == 'mse'
-    weight: 0.2
+    weight: 1.0
 
 
 optimizer:
