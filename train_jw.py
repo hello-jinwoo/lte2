@@ -249,13 +249,13 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
                      loss_feat * config['loss']['feat']['weight']
 
         psnr = metric_fn(pred, gt_img)
-        psnr_t = metric_fn(pred_t, gt_img)
+        # psnr_t = metric_fn(pred_t, gt_img)
         
         # tensorboard
         writer.add_scalars('loss_rgb', {'train': loss_rgb.item()}, (epoch-1)*iter_per_epoch + iteration)
         writer.add_scalars('loss_feat', {'train': loss_feat.item()}, (epoch-1)*iter_per_epoch + iteration)
         writer.add_scalars('psnr', {'train': psnr}, (epoch-1)*iter_per_epoch + iteration)
-        writer.add_scalars('psnr_t', {'train': psnr_t}, (epoch-1)*iter_per_epoch + iteration)
+        # writer.add_scalars('psnr_t', {'train': psnr_t}, (epoch-1)*iter_per_epoch + iteration)
         iteration += 1
         
         train_loss_rgb.add(loss_rgb.item())
