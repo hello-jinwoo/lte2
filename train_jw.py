@@ -236,14 +236,13 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
 
         pred, feat = model(x=inp, scale_factor=None, size=(round(inp_size*sf),round(inp_size*sf)), mode='train')
-        pred_t, feat_t = model_t(x=gt_img, scale_factor=1, mode='train')
-        pred_t, feat_t = pred_t.detach().clone(), feat_t.detach().clone()
+        _, feat_t = model_t(x=gt_img, scale_factor=1, mode='train')
   
         loss_rgb = loss_fn_rgb(pred, gt_img)
         loss_feat = 0
         
         for i in range(len_feat = len(feat)):
-            loss_feat += loss_fn_feat(feat[i], feat_t[i])
+            loss_feat += loss_fn_feat(feat[i], feat_t[i].detach().clone())
         loss_feat /= len(feat)
         
         total_loss = loss_rgb * config['loss']['rgb']['weight'] +\
