@@ -186,6 +186,7 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
 
 def train(train_loader, model, model_t, optimizer, epoch, config):
     model.train()
+    model_t.eval()
     # TODO: loss combination?
     loss_fn_rgb = nn.L1Loss()
     loss_fn_feat = nn.MSELoss()
@@ -236,12 +237,13 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
 
         pred, feat = model(x=inp, scale_factor=None, size=(round(inp_size*sf),round(inp_size*sf)), mode='train')
         pred_t, feat_t = model_t(x=gt_img, scale_factor=1, mode='train')
+        pred_t, feat_t = pred_t.detach().clone(), feat_t.detach().clone()
   
         loss_rgb = loss_fn_rgb(pred, gt_img)
         loss_feat = 0
         
         for i in range(len_feat = len(feat)):
-            loss_feat += loss_fn_feat(feat[i], feat_t[i].detach().clone())
+            loss_feat += loss_fn_feat(feat[i], feat_t[i])
         loss_feat /= len(feat)
         
         total_loss = loss_rgb * config['loss']['rgb']['weight'] +\
