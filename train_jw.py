@@ -241,7 +241,7 @@ def train(train_loader, model, model_t, optimizer, epoch, config):
         loss_rgb = loss_fn_rgb(pred, gt_img)
         loss_feat = 0
         
-        for i in range(len_feat = len(feat)):
+        for i in range(len(feat)):
             loss_feat += loss_fn_feat(feat[i], feat_t[i].detach().clone())
         loss_feat /= len(feat)
         
