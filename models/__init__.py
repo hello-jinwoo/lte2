@@ -5,3 +5,4 @@ from . import mlp
 from . import misc, liif, lte, ltep
 
 from . import edsr_jw, edsr_jw2, edsr_jw3
+from . import edsr_pos1
