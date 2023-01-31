@@ -43,4 +43,4 @@ exp:
   option_list: [3]
 
 is_resume : False
-resume: ./save/_train_edsr-baseline-multi_pos1/epoch-last.pth
+resume: ./save/_train_edsr-baseline-multi_pos2_3/epoch-last.pth
