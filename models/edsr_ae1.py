@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import numpy as np
+
 # from bicubic_pytorch import core
 
 from models import register
@@ -179,8 +181,10 @@ class EDSR(nn.Module):
         :param width: width of the positions
         :return: d_model*height*width position matrix
         """
-        pixel_pos_h = torch.arange(height, dtype=float) / height # [0, 1/14, 2/14, ... 13/14]
-        pixel_pos_w = torch.arange(width, dtype=float) / width # [0, 1/14, 2/14, ... 13/14]
+        # pixel_pos_h = torch.arange(height, dtype=torch.double) / height # [0, 1/14, 2/14, ... 13/14]
+        # pixel_pos_w = torch.arange(width, dtype=torch.double) / width # [0, 1/14, 2/14, ... 13/14]
+        pixel_pos_h = torch.arange(start=0, end=1, step=1/height) # [0, 1/14, 2/14, ... 13/14]
+        pixel_pos_w = torch.arange(start=0, end=1, step=1/width) # [0, 1/14, 2/14, ... 13/14]
         pixel_pos_pair = torch.cartesian_prod(pixel_pos_h, pixel_pos_w) # [[0, 0], [0, 1/14], ... [n/14, m/14], ... [13/14, 13/14]]
         pixel_area_pair = torch.zeros(len(pixel_pos_pair), 4)
         pixel_area_pair[:, 0] = pixel_pos_pair[:, 0]
@@ -207,14 +211,17 @@ class EDSR(nn.Module):
         y_theta_1 = 2 * np.pi * y_start
         y_theta_2 = 2 * np.pi * y_end
 
-        m = torch.arange(encoding_dim // 4, dtype=float)[None, :] + 1 # degrees for fourier series 
+        m = torch.arange(d_model // 4, dtype=float)[None, :] + 1 # degrees for fourier series 
         x_a_m = x_coeff * ((torch.sin(m * x_theta_2) - torch.sin(m * x_theta_1)) / m)
         x_b_m = x_coeff * ((torch.cos(m * x_theta_1) - torch.cos(m * x_theta_2)) / m)
-        y_a_m = x_coeff * ((torch.sin(m * y_theta_2) - torch.sin(m * y_theta_1)) / m)
-        y_b_m = x_coeff * ((torch.sin(m * y_theta_1) - torch.sin(m * y_theta_2)) / m)
+        y_a_m = y_coeff * ((torch.sin(m * y_theta_2) - torch.sin(m * y_theta_1)) / m)
+        y_b_m = y_coeff * ((torch.sin(m * y_theta_1) - torch.sin(m * y_theta_2)) / m)
         ae = torch.cat([x_a_m, x_b_m, y_a_m, y_b_m], dim=-1)
 
-        return pe
+        ae = ae.permute(1, 0)
+        ae = ae.reshape(1, d_model, height, width)
+        ae = ae.float()
+        return ae
 
 
     def imresize(self, x, scale_factor=None, size=None):
