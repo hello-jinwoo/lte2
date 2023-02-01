@@ -207,10 +207,10 @@ class EDSR(nn.Module):
 
         x = self.head(x)
         if 1 in self.args.option_list:
-            x = x + pos_enc_sinu_2d(d_model=self.n_feats, height=h, width=w)
+            x = x + self.pos_enc_sinu_2d(d_model=self.n_feats, height=h, width=w)
 
         if 2 in self.args.option_list:
-            res = self.body(x + pos_enc_sinu_2d(d_model=self.n_feats, height=h, width=w))
+            res = self.body(x + self.pos_enc_sinu_2d(d_model=self.n_feats, height=h, width=w))
         else:
             res = self.body(x)
         res += x
@@ -225,7 +225,7 @@ class EDSR(nn.Module):
         _,_,up_h,up_w = up_x.size()
 
         if 3 in self.args.option_list:
-            up_x = torch.concat(up_x, pos_enc_sinu_2d(d_model=self.n_feats, height=up_h, width=up_w))
+            up_x = torch.concat(up_x, self.pos_enc_sinu_2d(d_model=self.n_feats, height=up_h, width=up_w))
 
         x = self.tail(up_x)
         # x = self.tail(res)
