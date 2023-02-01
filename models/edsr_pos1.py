@@ -271,7 +271,8 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
 
 @register('edsr-baseline-pos1')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
-                       no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
+                       no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
+                       exp=None):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -283,12 +284,16 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
+
+    args.exp = exp
+
     return EDSR(args)
 
 
 @register('edsr-pos1')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
-              no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
+              no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
+              exp=None):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -300,4 +305,7 @@ def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
+
+    args.exp = exp
+
     return EDSR(args)
