@@ -132,7 +132,7 @@ class EDSR(nn.Module):
             self.out_dim = args.n_colors
             # define tail module
             
-            if 3 in self.args.exp.option_list:
+            if 3 in self.args.option_list:
                 self.tail = nn.Sequential(nn.Conv2d(n_feats * 2, n_feats, 1),
                                           SineActivation(), 
                                           nn.Conv2d(n_feats, n_feats, 1),
@@ -214,10 +214,10 @@ class EDSR(nn.Module):
         _,_,h,w = x.size()
 
         x = self.head(x)
-        if 1 in self.args.exp.option_list:
+        if 1 in self.args.option_list:
             x = x + pos_enc_sinu_2d(d_model=self.n_feats, height=h, width=w)
 
-        if 2 in self.args.exp.option_list:
+        if 2 in self.args.option_list:
             res = self.body(x + pos_enc_sinu_2d(d_model=self.n_feats, height=h, width=w))
         else:
             res = self.body(x)
@@ -232,7 +232,7 @@ class EDSR(nn.Module):
                                    size=size)
         _,_,up_h,up_w = up_x.size()
 
-        if 3 in self.args.exp.option_list:
+        if 3 in self.args.option_list:
             up_x = torch.concat(up_x, pos_enc_sinu_2d(d_model=self.n_feats, height=up_h, width=up_w))
 
         x = self.tail(up_x)
