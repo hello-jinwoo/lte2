@@ -97,6 +97,7 @@ class EDSR(nn.Module):
         self.args = args
         n_resblocks = args.n_resblocks
         n_feats = args.n_feats
+        self.n_feats = n_feats
         kernel_size = 3
         scale = args.scale[0]
         act = nn.ReLU(True)
