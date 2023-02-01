@@ -22,6 +22,8 @@ model:
   args:
     scale: 4
     upsample_mode: 'bicubic'
+    exp:
+      option_list: [3]
 
 optimizer:
   name: adam
@@ -38,9 +40,6 @@ epoch_save: 100
 scale:
   mode: 'multi_arbitrary'
   factor_range: [1, 4]
-  
-exp:
-  option_list: [3]
 
 is_resume : False
 resume: ./save/_train_edsr-baseline-multi_pos1/epoch-last.pth
