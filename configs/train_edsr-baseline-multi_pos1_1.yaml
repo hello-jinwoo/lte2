@@ -22,8 +22,7 @@ model:
   args:
     scale: 4
     upsample_mode: 'bicubic'
-    exp:
-      option_list: [1,3]
+    option_list: [1,3]
 
 optimizer:
   name: adam
