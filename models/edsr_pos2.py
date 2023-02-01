@@ -228,7 +228,7 @@ class EDSR(nn.Module):
         if self.args.no_upsampling:
             up_x = res
         else:
-            up_res = self.imresize(x=res,
+            up_x = self.imresize(x=res,
                                    scale_factor=scale_factor,
                                    size=size)
         _,_,up_h,up_w = up_x.size()
