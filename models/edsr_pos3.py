@@ -234,7 +234,7 @@ class EDSR(nn.Module):
         _,_,up_h,up_w = up_x.size()
 
         if 3 in self.args.option_list:
-            up_x = torch.concat([up_x, self.pos_enc_sinu_2d(d_model=self.n_feats, height=up_h, width=up_w)]).to(x.device)
+            up_x = torch.concat([up_x, self.pos_enc_sinu_2d(d_model=self.n_feats, height=up_h, width=up_w).to(x.device)])
 
         x = self.tail(up_x)
         # x = self.tail(res)
