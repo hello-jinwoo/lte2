@@ -277,7 +277,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-pos2')
+@register('edsr-baseline-pos3')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
@@ -294,7 +294,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-pos2')
+@register('edsr-pos3')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
