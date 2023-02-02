@@ -97,6 +97,10 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
 
     save_path = os.path.join(save_dir,  data_name)
     os.makedirs(save_path, exist_ok=True)
+    img_files = glob.glob(f"{save_path}/*")
+    for f in img_files:
+        os.remove(f)
+
     total_psnrs = []
 
     for gt_path in gt_images:
@@ -114,7 +118,8 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
         gt_tensor, pad = utils.pad_img(gt_tensor, int(24*scale_factor))#self.args.size_must_mode*self.args.scale)
         _,_, new_h, new_w = gt_tensor.size()
         input_tensor = core.imresize(gt_tensor, scale=1/scale_factor)
-        blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
+        blurred_tensor1 = F.interpolate(input_tensor, scale_factor=scale_factor, mode='nearest')
+        blurred_tensor2 = core.imresize(input_tensor, scale=scale_factor)
         # if type(config['model']['args']['upsample_mode']) == str:
         #     input_tensor = F.interpolate(gt_tensor, 
         #         scale_factor=1/scale_factor, 
@@ -137,13 +142,13 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
-        input_img = utils.tensor2numpy(blurred_tensor[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
+        input_img1 = utils.tensor2numpy(blurred_tensor1[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])
+        input_img2 = utils.tensor2numpy(blurred_tensor2[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
         gt_img = utils.tensor2numpy(gt_tensor[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
         psnr = utils.psnr_measure(output_img, gt_img)
 
-        canvas = np.concatenate((input_img,output_img, gt_img), 1)
-        
-        utils.save_img_np(canvas, '{}/{}.png'.format(save_path, filename))
+        canvas = np.concatenate((input_img1, input_img2, output_img, gt_img), 1)
+        utils.save_img_np(canvas, '{}/{}_{}_{}}.png'.format(save_path, filename, scale_factor, psnr))
 
         total_psnrs.append(psnr)
 

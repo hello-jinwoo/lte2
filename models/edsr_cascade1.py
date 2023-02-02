@@ -7,8 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import numpy as np
-
 # from bicubic_pytorch import core
 
 from models import register
@@ -93,17 +91,12 @@ url = {
     'r32f256x4': 'https://cv.snu.ac.kr/research/EDSR/models/edsr_x4-4f62e9ef.pt'
 }
 
-class SineActivation(nn.Module):
-    def forward(self, x):
-        return torch.sin(x)
-
 class EDSR(nn.Module):
     def __init__(self, args, conv=default_conv):
         super(EDSR, self).__init__()
         self.args = args
         n_resblocks = args.n_resblocks
         n_feats = args.n_feats
-        self.n_feats = n_feats
         kernel_size = 3
         scale = args.scale[0]
         act = nn.ReLU(True)
@@ -135,95 +128,16 @@ class EDSR(nn.Module):
             self.out_dim = args.n_colors
             # define tail module
             
-            if 3 in self.args.option_list:
-                self.tail = nn.Sequential(nn.Conv2d(n_feats * 2, n_feats, 1),
-                                          SineActivation(), 
-                                          nn.Conv2d(n_feats, n_feats, 1),
-                                          SineActivation(),
-                                          nn.Conv2d(n_feats, n_feats, 1),
-                                          SineActivation(),
-                                          nn.Conv2d(n_feats, n_feats, 1),
-                                          SineActivation(),
-                                          nn.Conv2d(n_feats, self.out_dim, 1))
-            else:
-                self.tail = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
-                                          nn.LeakyReLU(inplace=True), 
-                                          nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
+            self.tail_level1 = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
+                                                       nn.LeakyReLU(inplace=True), 
+                                                       nn.Conv2d(n_feats, n_feats, 3, 1, 1))
+            self.tail_level2 = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
+                                                       nn.LeakyReLU(inplace=True), 
+                                                       nn.Conv2d(n_feats, n_feats, 3, 1, 1))
+            self.tail_level3 = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
+                                                       nn.LeakyReLU(inplace=True), 
+                                                       nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
             
-    def pos_enc_sinu_2d(self, d_model, height, width):
-        """
-        :param d_model: dimension of the model
-        :param height: height of the positions
-        :param width: width of the positions
-        :return: d_model*height*width position matrix
-        """
-        if d_model % 4 != 0:
-            raise ValueError("Cannot use sin/cos positional encoding with "
-                             "odd dimension (got dim={:d})".format(d_model))
-        pe = torch.zeros(d_model, height, width)
-        # Each dimension use half of d_model
-        d_model = int(d_model / 2)
-        div_term = torch.exp(torch.arange(0., d_model, 2) *
-                             -(math.log(10000.0) / d_model))
-        pos_w = torch.arange(0., width).unsqueeze(1) / width
-        pos_h = torch.arange(0., height).unsqueeze(1) / height
-        pe[0:d_model:2, :, :] = torch.sin(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
-        pe[1:d_model:2, :, :] = torch.cos(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
-        pe[d_model::2, :, :] = torch.sin(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
-        pe[d_model + 1::2, :, :] = torch.cos(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
-
-        return pe
-
-    def area_enc_sinu_2d(self, d_model, height, width):
-        """
-        :param d_model: dimension of the model
-        :param height: height of the positions
-        :param width: width of the positions
-        :return: d_model*height*width position matrix
-        """
-        # pixel_pos_h = torch.arange(height, dtype=torch.double) / height # [0, 1/14, 2/14, ... 13/14]
-        # pixel_pos_w = torch.arange(width, dtype=torch.double) / width # [0, 1/14, 2/14, ... 13/14]
-        pixel_pos_h = torch.arange(start=0, end=1-1e-4, step=1/height) # [0, 1/14, 2/14, ... 13/14]
-        pixel_pos_w = torch.arange(start=0, end=1-1e-4, step=1/width) # [0, 1/14, 2/14, ... 13/14]
-        pixel_pos_pair = torch.cartesian_prod(pixel_pos_h, pixel_pos_w) # [[0, 0], [0, 1/14], ... [n/14, m/14], ... [13/14, 13/14]]
-        pixel_area_pair = torch.zeros(len(pixel_pos_pair), 4)
-        pixel_area_pair[:, 0] = pixel_pos_pair[:, 0]
-        pixel_area_pair[:, 1] = pixel_pos_pair[:, 0] + 1 / height
-        pixel_area_pair[:, 2] = pixel_pos_pair[:, 1]
-        pixel_area_pair[:, 3] = pixel_pos_pair[:, 1] + 1 / width
-
-        x_start= pixel_area_pair[:, 0][:, None]
-        x_end = pixel_area_pair[:, 1][:, None]
-        y_start = pixel_area_pair[:, 2][:, None]
-        y_end = pixel_area_pair[:, 3][:, None]
-
-        # TODO: experiments on scale of coefficient
-        # x_coeff = 1 / ((x_end - x_start) * 4)
-        # y_coeff = 1 / ((y_end - y_start) * 4)
-        # x_coeff = 1 / ((x_end - x_start) * 4 * np.pi)
-        # y_coeff = 1 / ((y_end - y_start) * 4 * np.pi)
-        x_coeff = 1 / ((x_end - x_start) * np.pi ** 2)
-        y_coeff = 1 / ((y_end - y_start) * np.pi ** 2)
-        # x_coeff = 1 / ((x_end - x_start) * 4 * np.pi ** 2)
-        # y_coeff = 1 / ((y_end - y_start) * 4 * np.pi ** 2)
-        x_theta_1 = 2 * np.pi * x_start
-        x_theta_2 = 2 * np.pi * x_end
-        y_theta_1 = 2 * np.pi * y_start
-        y_theta_2 = 2 * np.pi * y_end
-
-        m = torch.arange(d_model // 4, dtype=float)[None, :] + 1 # degrees for fourier series 
-        x_a_m = x_coeff * ((torch.sin(m * x_theta_2) - torch.sin(m * x_theta_1)) / m)
-        x_b_m = x_coeff * ((torch.cos(m * x_theta_1) - torch.cos(m * x_theta_2)) / m)
-        y_a_m = y_coeff * ((torch.sin(m * y_theta_2) - torch.sin(m * y_theta_1)) / m)
-        y_b_m = y_coeff * ((torch.sin(m * y_theta_1) - torch.sin(m * y_theta_2)) / m)
-        ae = torch.cat([x_a_m, x_b_m, y_a_m, y_b_m], dim=-1)
-
-        ae = ae.permute(1, 0)
-        ae = ae.reshape(1, d_model, height, width)
-        ae = ae.float()
-        return ae
-
-
     def imresize(self, x, scale_factor=None, size=None):
         if type(self.args.upsample_mode) == str:
             if scale_factor == None:
@@ -245,11 +159,13 @@ class EDSR(nn.Module):
                     mode=self.args.upsample_mode[0])
             for m in self.args.upsample_mode[1:]:
                 if scale_factor == None:
-                    tmp_res_ = F.interpolate(x, size=size, mode=m)
-                    tmp_res = torch.cat([tmp_res, tmp_res_], dim=1)
+                    tmp_res = tmp_res + F.interpolate(x, 
+                                                      size=size, 
+                                                      mode=m)
                 else:
-                    tmp_res_ = F.interpolate(x, scale_factor=scale_factor, mode=m)
-                    tmp_res = torch.cat([tmp_res, tmp_res_], dim=1)
+                    tmp_res = tmp_res + F.interpolate(x, 
+                                                      scale_factor=scale_factor, 
+                                                      mode=m)
             tmp_res = tmp_res / len(self.args.upsample_mode)
             up_x = tmp_res
         else:
@@ -260,38 +176,48 @@ class EDSR(nn.Module):
 
         return up_x
 
-
     def forward(self, x, scale_factor=None, size=None, mode='test'): 
         #x = self.sub_mean(x)
-        _,_,h,w = x.size()
-
         x = self.head(x)
-        if 1 in self.args.option_list:
-            x = x + self.area_enc_sinu_2d(d_model=self.n_feats, height=h, width=w).to(x.device)
 
-        if 2 in self.args.option_list:
-            res = self.body(x + self.area_enc_sinu_2d(d_model=self.n_feats, height=h, width=w)).to(x.device)
-        else:
-            res = self.body(x)
+        res = self.body(x)
         res += x
 
+        _,_,h,w = x.size()
+        if scale_factor:
+            target_h = h * scale_factor
+            target_w = w * scale_factor
+        if size:
+            target_h, target_w = size
 
         if self.args.no_upsampling:
             up_x = res
         else:
-            up_x = self.imresize(x=res,
-                                   scale_factor=scale_factor,
-                                   size=size)
-        _,_,up_h,up_w = up_x.size()
+            up_x = None
+            while (h, w) == (target_h, target_w):
+                if target_h / h < 1/3:
 
-        if 3 in self.args.option_list:
-            hr_pos_enc = self.area_enc_sinu_2d(d_model=self.n_feats, height=up_h, width=up_w).to(x.device)
-            hr_pos_enc = hr_pos_enc.expand(up_x.size())
-            up_x = torch.concat([up_x, hr_pos_enc], dim=1)
-
-        x = self.tail(up_x)
-        # x = self.tail(res)
-        # x = self.add_mean(x)
+                    up_res = self.imresize(x=res,
+                                           size=(target_h//3, target_w//3))
+                    _,_,h,w = up_res.size()
+                    up_x = self.tail_level1(up_res)
+                elif target_h / h < 1/2:
+                    up_res = self.imresize(x=res,
+                                           size=(target_h//2, target_w//2))
+                    _,_,h,w = up_res.size()
+                    if up_x:
+                        up_x = self.tail_level2(up_x + up_res)
+                    else:
+                        up_x = self.tail_level2(up_res)
+                else:
+                    up_res = self.imresize(x=res,
+                                           size=(target_h, target_w))
+                    _,_,h,w = up_res.size()
+                    if up_x:
+                        up_x = self.tail_level2(up_x + up_res)
+                    else:
+                        up_x = self.tail_level2(up_res)
+                                        
         return x
 
     def load_state_dict(self, state_dict, strict=True):
@@ -314,10 +240,9 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-light-ae1')
+@register('edsr-light-cascade1')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
-                    no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
-                    option_list=None):
+                    no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -329,15 +254,12 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
-
-    args.option_list = option_list
     return EDSR(args)
 
 
-@register('edsr-baseline-ae1')
+@register('edsr-baseline-cascade1')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
-                       no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
-                       option_list=None):
+                       no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -349,16 +271,12 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
-
-    args.option_list = option_list
-
     return EDSR(args)
 
 
-@register('edsr-ae1')
+@register('edsr-cascade1')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
-              no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
-              option_list=None):
+              no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -370,7 +288,4 @@ def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
-
-    args.option_list = option_list
-
     return EDSR(args)

@@ -7,3 +7,4 @@ from . import misc, liif, lte, ltep
 from . import edsr_jw, edsr_jw2, edsr_jw3
 from . import edsr_pos1, edsr_pos2
 from . import edsr_ae1
+from . import edsr_cascade1, edsr_cascade2, edsr_cascade3
