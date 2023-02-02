@@ -195,13 +195,13 @@ class EDSR(nn.Module):
         else:
             up_x = None
             while (h, w) == (target_h, target_w):
-                if target_h / h < 1/3:
+                if target_h / h > 3:
 
                     up_res = self.imresize(x=res,
                                            size=(target_h//3, target_w//3))
                     _,_,h,w = up_res.size()
                     up_x = self.tail_level1(up_res)
-                elif target_h / h < 1/2:
+                elif target_h / h > 2:
                     up_res = self.imresize(x=res,
                                            size=(target_h//2, target_w//2))
                     _,_,h,w = up_res.size()
