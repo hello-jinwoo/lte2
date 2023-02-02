@@ -205,7 +205,7 @@ class EDSR(nn.Module):
                     up_res = self.imresize(x=res,
                                            size=(target_h//2, target_w//2))
                     _,_,h,w = up_res.size()
-                    if up_x:
+                    if up_x != None:
                         up_x = self.tail_level2(up_x) + up_res
                     else:
                         up_x = self.tail_level2(up_res)
@@ -213,7 +213,7 @@ class EDSR(nn.Module):
                     up_res = self.imresize(x=res,
                                            size=(target_h, target_w))
                     _,_,h,w = up_res.size()
-                    if up_x:
+                    if up_x != None:
                         x = self.tail_level3(up_x) + up_res
                     else:
                         x = self.tail_level3(up_res)
