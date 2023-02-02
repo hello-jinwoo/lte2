@@ -206,7 +206,9 @@ class EDSR(nn.Module):
                                            size=(math.ceil(target_h/2), math.ceil(target_w/2)))
                     _,_,h,w = up_res.size()
                     if up_x != None:
-                        up_x = self.tail_level2(up_x + up_res)
+                        up_x = self.imresize(x=res,
+                                             size=(math.ceil(target_h/2), math.ceil(target_w/2)))
+                        up_x = self.tail_level2(up_res + up_x)
                     else:
                         up_x = self.tail_level2(up_res)
                 else:
@@ -214,7 +216,9 @@ class EDSR(nn.Module):
                                            size=(target_h, target_w))
                     _,_,h,w = up_res.size()
                     if up_x != None:
-                        x = self.tail_level3(up_x + up_res)
+                        up_x = self.imresize(x=res,
+                                             size=(target_h, target_w))
+                        x = self.tail_level3(up_res + up_x)
                     else:
                         x = self.tail_level3(up_res)
                                         
