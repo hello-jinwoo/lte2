@@ -20,6 +20,7 @@ data_norm:
 model:
   name: edsr-baseline-cascade1
   args:
+  
     scale: 4
     upsample_mode: 'bicubic'
 

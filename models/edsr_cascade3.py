@@ -198,12 +198,12 @@ class EDSR(nn.Module):
                 if target_h / h > 3:
 
                     up_res = self.imresize(x=res,
-                                           size=(target_h//3, target_w//3))
+                                           size=(math.ceil(target_h/3), math.ceil(target_w/3)))
                     _,_,h,w = up_res.size()
                     up_x = self.tail_level1(up_res)
                 elif target_h / h > 2:
                     up_res = self.imresize(x=res,
-                                           size=(target_h//2, target_w//2))
+                                           size=(math.ceil(target_h/2), math.ceil(target_w/2)))
                     _,_,h,w = up_res.size()
                     if up_x != None:
                         up_x = self.tail_level2(up_x) + up_res
