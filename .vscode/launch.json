@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug_edsr_ae",
+            "name": "debug_edsr_cascade",
             "type": "python",
             "request": "launch",
             "program": "train4.py",
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
-                "--config=configs/train_edsr-baseline-multi_ae1_1.yaml", "--gpu=0,1"
+                "--config=configs/train_edsr-baseline-multi_cascade1.yaml", "--gpu=0,1"
             ]
         }
     ]

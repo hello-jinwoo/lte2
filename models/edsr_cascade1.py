@@ -184,10 +184,10 @@ class EDSR(nn.Module):
         res += x
 
         _,_,h,w = x.size()
-        if scale_factor:
+        if scale_factor != None:
             target_h = h * scale_factor
             target_w = w * scale_factor
-        if size:
+        if size != None:
             target_h, target_w = size
 
         if self.args.no_upsampling:
@@ -214,9 +214,9 @@ class EDSR(nn.Module):
                                            size=(target_h, target_w))
                     _,_,h,w = up_res.size()
                     if up_x:
-                        up_x = self.tail_level2(up_x + up_res)
+                        x = self.tail_level3(up_x + up_res)
                     else:
-                        up_x = self.tail_level2(up_res)
+                        x = self.tail_level3(up_res)
                                         
         return x
 

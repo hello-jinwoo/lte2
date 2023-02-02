@@ -214,9 +214,9 @@ class EDSR(nn.Module):
                                            size=(target_h, target_w))
                     _,_,h,w = up_res.size()
                     if up_x:
-                        up_x = self.tail_level2(up_x) + up_res
+                        x = self.tail_level3(up_x) + up_res
                     else:
-                        up_x = self.tail_level2(up_res)
+                        x = self.tail_level3(up_res)
                                         
         return x
 

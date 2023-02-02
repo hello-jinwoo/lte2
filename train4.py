@@ -148,7 +148,7 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
         psnr = utils.psnr_measure(output_img, gt_img)
 
         canvas = np.concatenate((input_img1, input_img2, output_img, gt_img), 1)
-        utils.save_img_np(canvas, '{}/{}_{}_{}}.png'.format(save_path, filename, scale_factor, psnr))
+        utils.save_img_np(canvas, '{}/{}_{}_{:.2f}.png'.format(save_path, filename, scale_factor, psnr))
 
         total_psnrs.append(psnr)
 
