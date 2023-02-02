@@ -97,9 +97,6 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
 
     save_path = os.path.join(save_dir,  data_name)
     os.makedirs(save_path, exist_ok=True)
-    img_files = glob.glob(f"{save_path}/*")
-    for f in img_files:
-        os.remove(f)
 
     total_psnrs = []
 
@@ -146,6 +143,10 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
         input_img2 = utils.tensor2numpy(blurred_tensor2[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
         gt_img = utils.tensor2numpy(gt_tensor[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
         psnr = utils.psnr_measure(output_img, gt_img)
+
+        img_files = glob.glob(f"{save_path}/{filename}_{scale_factor}*")
+        for f in img_files:
+            os.remove(f)
 
         canvas = np.concatenate((input_img1, input_img2, output_img, gt_img), 1)
         utils.save_img_np(canvas, '{}/{}_{}_{:.2f}.png'.format(save_path, filename, scale_factor, psnr))
