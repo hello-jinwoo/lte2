@@ -194,7 +194,7 @@ class EDSR(nn.Module):
             up_x = res
         else:
             up_x = None
-            while (h, w) == (target_h, target_w):
+            while (h, w) != (target_h, target_w):
                 if target_h / h > 3:
 
                     up_res = self.imresize(x=res,
