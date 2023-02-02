@@ -193,7 +193,7 @@ class EDSR(nn.Module):
         if self.args.no_upsampling:
             up_x = res
         else:
-            if (h, w) != (target_h, target_w):
+            if (h, w) == (target_h, target_w):
                 x = self.tail_level3(res)
             else:
                 up_x = None

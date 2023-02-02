@@ -193,30 +193,37 @@ class EDSR(nn.Module):
         if self.args.no_upsampling:
             up_x = res
         else:
-            up_x = None
-            while (h, w) != (target_h, target_w):
-                if target_h / h > 3:
+            if (h, w) == (target_h, target_w):
+                x = self.tail_level3(res)
+            else:
+                up_x = None
+                while (h, w) != (target_h, target_w):
+                    if target_h / h > 3:
 
-                    up_res = self.imresize(x=res,
-                                           size=(math.ceil(target_h/3), math.ceil(target_w/3)))
-                    _,_,h,w = up_res.size()
-                    up_x = self.tail_level1(up_res)
-                elif target_h / h > 2:
-                    up_res = self.imresize(x=res,
-                                           size=(math.ceil(target_h/2), math.ceil(target_w/2)))
-                    _,_,h,w = up_res.size()
-                    if up_x != None:
-                        up_x = self.tail_level2(up_x) + self.tail_level2(up_res)
+                        up_res = self.imresize(x=res,
+                                            size=(math.ceil(target_h/3), math.ceil(target_w/3)))
+                        _,_,h,w = up_res.size()
+                        up_x = self.tail_level1(up_res)
+                    elif target_h / h > 2:
+                        up_res = self.imresize(x=res,
+                                            size=(math.ceil(target_h/2), math.ceil(target_w/2)))
+                        _,_,h,w = up_res.size()
+                        if up_x != None:
+                            up_x = self.imresize(x=res,
+                                                size=(math.ceil(target_h/2), math.ceil(target_w/2)))
+                            up_x = self.tail_level2(up_res) + up_x
+                        else:
+                            up_x = self.tail_level2(up_res)
                     else:
-                        up_x = self.tail_level2(up_res)
-                else:
-                    up_res = self.imresize(x=res,
-                                           size=(target_h, target_w))
-                    _,_,h,w = up_res.size()
-                    if up_x != None:
-                        x = self.tail_level3(up_x) + self.tail_level2(up_res)
-                    else:
-                        x = self.tail_level3(up_res)
+                        up_res = self.imresize(x=res,
+                                            size=(target_h, target_w))
+                        _,_,h,w = up_res.size()
+                        if up_x != None:
+                            up_x = self.imresize(x=res,
+                                                size=(target_h, target_w))
+                            x = self.tail_level3(up_res) + up_x
+                        else:
+                            x = self.tail_level3(up_res)
                                         
         return x
 
