@@ -249,7 +249,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-light-ae1')
+@register('edsr-light-sin')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     option_list=None):
@@ -269,7 +269,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-ae1')
+@register('edsr-baseline-sin')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
                        option_list=None):
@@ -290,7 +290,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-ae1')
+@register('edsr-sin')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               option_list=None):
