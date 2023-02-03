@@ -9,3 +9,4 @@ from . import edsr_pos1, edsr_pos2
 from . import edsr_ae1
 from . import edsr_cascade1, edsr_cascade2, edsr_cascade3
 from . import edsr_sin
+from . import edsr_bigdec1
