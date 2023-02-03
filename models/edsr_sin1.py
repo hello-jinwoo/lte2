@@ -133,21 +133,15 @@ class EDSR(nn.Module):
             self.out_dim = args.n_colors
             # define tail module
             
-            self.tail = nn.Sequential(nn.Conv2d(n_feats, n_feats * 2, 3, 1, 1),
-                                        nn.LeakyReLU(inplace=True), 
-                                        nn.Conv2d(n_feats * 2, n_feats * 4, 3, 1, 1),
-                                        nn.LeakyReLU(inplace=True), 
-                                        nn.Conv2d(n_feats * 4, n_feats * 4, 3, 1, 1),
-                                        nn.LeakyReLU(inplace=True), 
-                                        nn.Conv2d(n_feats * 4, n_feats * 4, 3, 1, 1),
-                                        nn.LeakyReLU(inplace=True), 
-                                        nn.Conv2d(n_feats * 4, n_feats * 2, 3, 1, 1),
-                                        nn.LeakyReLU(inplace=True), 
-                                        nn.Conv2d(n_feats * 2, n_feats, 1),
-                                        nn.LeakyReLU(inplace=True), 
-                                        nn.Conv2d(n_feats, n_feats // 2, 1),
-                                        nn.LeakyReLU(inplace=True), 
-                                        nn.Conv2d(n_feats // 2, self.out_dim, 1))
+            self.tail = nn.Sequential(nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(), 
+                                        nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(),
+                                        nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(),
+                                        nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(),
+                                        nn.Conv2d(n_feats, self.out_dim, 1))
             
     def pos_enc_sinu_2d(self, d_model, height, width):
         """
@@ -250,7 +244,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-light-bigdec2')
+@register('edsr-light-sin1')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
@@ -267,7 +261,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-bigdec2')
+@register('edsr-baseline-sin1')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
@@ -284,7 +278,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-bigdec2')
+@register('edsr-sin1')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()

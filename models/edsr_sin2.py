@@ -104,7 +104,8 @@ class EDSR(nn.Module):
         self.n_feats = n_feats
         kernel_size = 3
         scale = args.scale[0]
-        act = nn.ReLU(True)
+        # act = nn.ReLU(True)
+        act = SineActivation()
         url_name = 'r{}f{}x{}'.format(n_resblocks, n_feats, scale)
         if url_name in url:
             self.url = url[url_name]
@@ -244,7 +245,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-light-sin')
+@register('edsr-light-sin2')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
@@ -261,7 +262,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-sin')
+@register('edsr-baseline-sin2')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
@@ -278,7 +279,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-sin')
+@register('edsr-sin2')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()

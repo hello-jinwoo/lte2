@@ -18,7 +18,7 @@ data_norm:
   gt: {sub: [0.5], div: [0.5]}
 
 model:
-  name: edsr-baseline-sin
+  name: edsr-baseline-sin2
   args:
     scale: 4
     upsample_mode: 'bicubic'
@@ -41,4 +41,4 @@ scale:
   
 
 is_resume : False
-resume: ./save/_train_edsr-baseline_sin/epoch-last.pth
+resume: ./save/_train_edsr-baseline_sin2/epoch-last.pth
