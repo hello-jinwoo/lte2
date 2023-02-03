@@ -211,7 +211,7 @@ class EDSR(nn.Module):
                         if up_x != None:
                             up_x = self.imresize(x=res,
                                                 size=(math.ceil(target_h/2), math.ceil(target_w/2)))
-                            up_x = self.tail_level2(up_res) + up_x
+                            up_x = self.tail_level2(up_res) + self.tail_level3(up_x)
                         else:
                             up_x = self.tail_level2(up_res)
                     else:
@@ -221,7 +221,7 @@ class EDSR(nn.Module):
                         if up_x != None:
                             up_x = self.imresize(x=res,
                                                 size=(target_h, target_w))
-                            x = self.tail_level3(up_res) + up_x
+                            x = self.tail_level3(up_res) + self.tail_level3(up_x)
                         else:
                             x = self.tail_level3(up_res)
                                         
@@ -247,7 +247,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-light-cascade2')
+@register('edsr-light-cascade3')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
@@ -264,7 +264,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-cascade2')
+@register('edsr-baseline-cascade3')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
@@ -281,7 +281,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-cascade2')
+@register('edsr-cascade3')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()

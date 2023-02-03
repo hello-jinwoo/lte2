@@ -136,7 +136,10 @@ class EDSR(nn.Module):
                                                        nn.Conv2d(n_feats, n_feats, 3, 1, 1))
             self.tail_level3 = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
                                                        nn.LeakyReLU(inplace=True), 
-                                                       nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
+                                                       nn.Conv2d(n_feats, n_feats, 3, 1, 1))
+            self.tail_final = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
+                                                      nn.LeakyReLU(inplace=True), 
+                                                      nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
             
     def imresize(self, x, scale_factor=None, size=None):
         if type(self.args.upsample_mode) == str:
@@ -194,7 +197,7 @@ class EDSR(nn.Module):
             up_x = res
         else:
             if (h, w) == (target_h, target_w):
-                x = self.tail_level3(res)
+                x = self.tail_final(res)
             else:
                 up_x = None
                 while (h, w) != (target_h, target_w):
@@ -211,7 +214,7 @@ class EDSR(nn.Module):
                         if up_x != None:
                             up_x = self.imresize(x=res,
                                                 size=(math.ceil(target_h/2), math.ceil(target_w/2)))
-                            up_x = self.tail_level2(up_res) + self.tail_level3(up_x)
+                            up_x = self.tail_level2(up_res) + up_x
                         else:
                             up_x = self.tail_level2(up_res)
                     else:
@@ -221,9 +224,10 @@ class EDSR(nn.Module):
                         if up_x != None:
                             up_x = self.imresize(x=res,
                                                 size=(target_h, target_w))
-                            x = self.tail_level3(up_res) + self.tail_level3(up_x)
+                            up_x = self.tail_level3(up_res) + up_x
                         else:
-                            x = self.tail_level3(up_res)
+                            up_x = self.tail_level3(up_res)
+                x = self.tail_final(up_x)
                                         
         return x
 
@@ -247,7 +251,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-light-cascade3')
+@register('edsr-light-cascade2')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
@@ -264,7 +268,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-cascade3')
+@register('edsr-baseline-cascade2')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
@@ -281,7 +285,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-cascade3')
+@register('edsr-cascade2')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
