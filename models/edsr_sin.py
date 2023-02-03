@@ -133,20 +133,15 @@ class EDSR(nn.Module):
             self.out_dim = args.n_colors
             # define tail module
             
-            if 3 in self.args.option_list:
-                self.tail = nn.Sequential(nn.Conv2d(n_feats, n_feats, 1),
-                                          SineActivation(), 
-                                          nn.Conv2d(n_feats, n_feats, 1),
-                                          SineActivation(),
-                                          nn.Conv2d(n_feats, n_feats, 1),
-                                          SineActivation(),
-                                          nn.Conv2d(n_feats, n_feats, 1),
-                                          SineActivation(),
-                                          nn.Conv2d(n_feats, self.out_dim, 1))
-            else:
-                self.tail = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
-                                          nn.LeakyReLU(inplace=True), 
-                                          nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
+            self.tail = nn.Sequential(nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(), 
+                                        nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(),
+                                        nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(),
+                                        nn.Conv2d(n_feats, n_feats, 1),
+                                        SineActivation(),
+                                        nn.Conv2d(n_feats, self.out_dim, 1))
             
     def pos_enc_sinu_2d(self, d_model, height, width):
         """
@@ -251,8 +246,7 @@ class EDSR(nn.Module):
 
 @register('edsr-light-sin')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
-                    no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
-                    option_list=None):
+                    no_upsampling=False, upsample_mode='bicubic',rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -264,15 +258,12 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
-
-    args.option_list = option_list
     return EDSR(args)
 
 
 @register('edsr-baseline-sin')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
-                       no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
-                       option_list=None):
+                       no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -284,16 +275,12 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
-
-    args.option_list = option_list
-
     return EDSR(args)
 
 
 @register('edsr-sin')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
-              no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
-              option_list=None):
+              no_upsampling=False, upsample_mode='bicubic', rgb_range=1):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -305,7 +292,4 @@ def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2,
 
     args.rgb_range = rgb_range
     args.n_colors = 3
-
-    args.option_list = option_list
-
     return EDSR(args)
