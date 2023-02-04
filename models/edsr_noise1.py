@@ -217,7 +217,9 @@ class EDSR(nn.Module):
 
         if mode == 'train':
             noise = torch.randn_like(up_x)
-        x = self.tail(up_x + noise)
+            x = self.tail(up_x + noise)
+        else:
+            x = self.tail(up_x)
         return x
 
     def load_state_dict(self, state_dict, strict=True):
