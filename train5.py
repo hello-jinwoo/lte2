@@ -90,6 +90,8 @@ def prepare_training():
 
 def batched_output(model, input, scale_factor, mode, option='non-overlap', input_size=48):
     B, _, h, w = input.size()
+    input_size = min(input_size, h, w)
+    
     pad_w = 0
     if w % input_size > 0:
         pad_w = input_size - w % input_size
