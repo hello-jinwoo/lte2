@@ -11,14 +11,14 @@ train_dataset:
       inp_size : 48
       gt_size: 192
       augment: true
-  batch_size: 4
+  batch_size: 16
 
 data_norm:
   inp: {sub: [0.5], div: [0.5]}
   gt: {sub: [0.5], div: [0.5]}
 
 model:
-  name: salwnet1-light
+  name: edsr-baseline-m
   args:
     scale: 4
     upsample_mode: 'bicubic'
@@ -26,7 +26,7 @@ model:
 optimizer:
   name: adam
   args:
-    lr: 1.e-4
+    lr: 3.e-4
 epoch_max: 1000
 multi_step_lr:
   milestones: [200, 400, 600, 800]
@@ -41,4 +41,4 @@ scale:
   
 
 is_resume : False
-resume: ./save/_train_salwnet1-light-multi/epoch-last.pth
+resume: ./save/_train_edsr-baseline-liif/epoch-last.pth
