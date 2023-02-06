@@ -90,7 +90,13 @@ def prepare_training():
 
 def batched_output(model, input, scale_factor, mode, option='non-overlap', input_size=48):
     B, _, h, w = input.size()
-    pad_size = [0, input_size - w % input_size, 0, input_size - h % input_size]
+    pad_w = 0
+    if w % input_size > 0:
+        pad_w = input_size - w % input_size
+    pad_h = 0
+    if h % input_size > 0:
+        pad_h = input_size - h % input_size
+    pad_size = [0, pad_w, 0, pad_h]
     h_padded = h + pad_size[3]
     w_padded = w + pad_size[1]
     input = F.pad(input, pad_size, mode='reflect')
