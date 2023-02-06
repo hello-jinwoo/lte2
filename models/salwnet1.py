@@ -278,6 +278,27 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
+@register('salwnet1-tiny')
+def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2, 
+                    no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
+                    local_window_size=24, mhsa_dim=16, mhsa_head=1, mhsa_layer=2):
+    args = Namespace()
+    args.n_resblocks = n_resblocks
+    args.n_feats = n_feats
+    args.res_scale = res_scale
+
+    args.scale = [scale]
+    args.no_upsampling = no_upsampling
+    args.upsample_mode = upsample_mode
+
+    args.rgb_range = rgb_range
+    args.n_colors = 3
+    args.local_window_size = local_window_size
+    args.mhsa_dim = mhsa_dim
+    args.mhsa_head = mhsa_head
+    args.mhsa_layer = mhsa_layer
+    return EDSR(args)
+
 @register('salwnet1-light')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
