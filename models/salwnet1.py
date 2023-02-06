@@ -137,8 +137,8 @@ class EDSR(nn.Module):
                                       nn.LeakyReLU(inplace=True),
                                       nn.Conv2d(n_feats, n_feats, 1))
 
-            mhsa_encoder_layer = nn.TransformerEncoderLayer(d_model=n_feats, nhead=1, batch_first=True)
-            self.mhsa_after_tail = nn.TransformerEncoder(mhsa_encoder_layer, num_layers=4)
+            mhsa_encoder_layer = nn.TransformerEncoderLayer(d_model=args.mhsa_dim, nhead=args.mhsa_head, batch_first=True)
+            self.mhsa_after_tail = nn.TransformerEncoder(mhsa_encoder_layer, num_layers=args.mhsa_layer)
 
             self.final = nn.Sequential(nn.Conv2d(n_feats, n_feats, 3, 1, 1),
                                        nn.LeakyReLU(inplace=True),
@@ -281,7 +281,7 @@ class EDSR(nn.Module):
 @register('salwnet1-light')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
-                    local_window_size=24, mhsa_dim=32, mhsa_head=1, mhsa_layer=4):
+                    local_window_size=24, mhsa_dim=32, mhsa_head=1, mhsa_layer=3):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
