@@ -11,7 +11,7 @@ train_dataset:
       inp_size : 48
       gt_size: 192
       augment: true
-  batch_size: 4
+  batch_size: 16
 
 data_norm:
   inp: {sub: [0.5], div: [0.5]}

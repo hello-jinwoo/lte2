@@ -179,9 +179,9 @@ class EDSR(nn.Module):
         return up_x
 
     def forward(self, x, scale_factor=None, size=None, mode='test'): 
-        B,D,h,w = x.size()
-
         x = self.head(x)
+
+        B,D,h,w = x.size()
 
         # res = self.body(x)
         # res += x
@@ -191,7 +191,7 @@ class EDSR(nn.Module):
         if scale_factor != None:
             uws = max(math.ceil(12 / scale_factor), 1)
         else:
-            uws = math.ceil(H/h)
+            uws = max(math.ceil(12 * h / size[0]), 1)
         lws = self.args.local_window_size
         if lws % uws != 0:
             if lws % uws > uws - lws % uws:
@@ -233,7 +233,7 @@ class EDSR(nn.Module):
         
         # MHSA
         fusion_feat = torch.cat([uws_feat, lws_feat, global_feat], dim=1) # (B * N_uws_patches, uws*uws+2, D)
-        x_mhsa = self.mhsa_after_tail(fusion_feat)
+        x_mhsa = self.mhsa_before_tail(fusion_feat)
         x_mhsa = x_mhsa[:, :-2, :] # cut out last two feat (lws, global) # (B * N_uws_patches, uws*uws, D) - (C`)
         x_mhsa = x_mhsa.reshape(B, -1, uws*uws, D).permute(0, 3, 1, 2) # (B, D, N_uws_patches, uws*uws) - (B`)
         x_mhsa = x_mhsa.reshape(B, D, h_uws_patches, w_uws_patches, uws, uws) # (B, D, h_uws_patches, w_uws_patches, uws, uws) - (A`)
