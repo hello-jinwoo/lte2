@@ -293,7 +293,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
     args.mhsa_layer = mhsa_layer
     return EDSR(args)
 
-@register('salwnet5-light')
+@register('salwnet6-light')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     local_window_size=12, mhsa_dim=32, mhsa_head=1, mhsa_layer=3):
@@ -315,7 +315,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('salwnet5-baseline')
+@register('salwnet6-baseline')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        local_window_size=12, mhsa_dim=64, mhsa_head=4, mhsa_layer=6):
@@ -337,7 +337,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('salwnet5')
+@register('salwnet6')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               local_window_size=12, mhsa_dim=128, mhsa_head=6, mhsa_layer=8):
