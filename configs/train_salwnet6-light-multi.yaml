@@ -41,4 +41,4 @@ scale:
   
 
 is_resume : False
-resume: ./save/_train_salwnet5-light-multi/epoch-last.pth
+resume: ./save/_train_salwnet6-light-multi/epoch-last.pth

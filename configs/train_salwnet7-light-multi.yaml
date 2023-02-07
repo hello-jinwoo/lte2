@@ -18,7 +18,7 @@ data_norm:
   gt: {sub: [0.5], div: [0.5]}
 
 model:
-  name: salwnet5-tiny
+  name: salwnet7-light
   args:
     scale: 4
     upsample_mode: 'bicubic'
@@ -41,4 +41,4 @@ scale:
   
 
 is_resume : False
-resume: ./save/_train_salwnet6-tiny-multi/epoch-last.pth
+resume: ./save/_train_salwnet7-light-multi/epoch-last.pth
