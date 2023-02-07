@@ -14,7 +14,7 @@ from models import register
 
 """
 ScaleAdaptiveLocalWindow network (SALWnet)
-v7 = v5 + v6
+v5 -> v5_1 : last kernel size of tail from 15 to 1
 """
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True):
@@ -117,15 +117,15 @@ class EDSR(nn.Module):
         m_head = [conv(args.n_colors, n_feats, kernel_size)]
 
         # define body module
-        m_body = [
-            ResBlock(
-                conv, n_feats, kernel_size, act=act, res_scale=args.res_scale
-            ) for _ in range(n_resblocks)
-        ]
-        m_body.append(conv(n_feats, n_feats, kernel_size))
+        # m_body = [
+        #     ResBlock(
+        #         conv, n_feats, kernel_size, act=act, res_scale=args.res_scale
+        #     ) for _ in range(n_resblocks)
+        # ]
+        # m_body.append(conv(n_feats, n_feats, kernel_size))
 
         self.head = nn.Sequential(*m_head)
-        self.body = nn.Sequential(*m_body)
+        # self.body = nn.Sequential(*m_body)
 
         if args.no_upsampling:
             self.out_dim = n_feats
@@ -138,9 +138,9 @@ class EDSR(nn.Module):
 
             self.tail = nn.Sequential(nn.Conv2d(args.mhsa_dim, n_feats, 15, 1, 7),
                                       nn.LeakyReLU(inplace=True),
-                                      nn.Conv2d(n_feats, n_feats, 15, 1, 7),
+                                      nn.Conv2d(args.mhsa_dim, n_feats, 15, 1, 7),
                                       nn.LeakyReLU(inplace=True),
-                                      nn.Conv2d(n_feats, self.out_dim, 15, 1, 7))
+                                      nn.Conv2d(n_feats, self.out_dim, 1))
 
 
     def imresize(self, x, scale_factor=None, size=None):
@@ -184,8 +184,8 @@ class EDSR(nn.Module):
 
         B,D,h,w = x.size()
 
-        res = self.body(x)
-        res += x
+        # res = self.body(x)
+        # res += x
 
         # uws: upscale_window_size
         # lws: local_window_size (have to be multiple of uws)
@@ -211,16 +211,16 @@ class EDSR(nn.Module):
             h_margin = lws * (w // lws + 1) - w
             pad_size[1] = h_margin
         pad_size = tuple(pad_size)
-        padded_res = F.pad(input=res, pad=pad_size, mode='reflect') # (B, D, h`, w`)
+        padded_x = F.pad(input=x, pad=pad_size, mode='reflect') # (B, D, h`, w`)
 
         # uws
-        uws_patches = padded_res.unfold(2, uws, uws).unfold(3, uws, uws) # (B, D, h_uws_patches, w_uws_patches, uws, uws) - (A)
+        uws_patches = padded_x.unfold(2, uws, uws).unfold(3, uws, uws) # (B, D, h_uws_patches, w_uws_patches, uws, uws) - (A)
         unfold_shape = uws_patches.size() # (B, D, h_uws_patches, w_uws_patches, uws, uws)
         _,_,h_uws_patches,w_uws_patches,_,_ = uws_patches.size()
         uws_patches = uws_patches.reshape(B, D, -1, uws*uws) # (B, D, N_uws_patches, uws*uws) - (B)
         uws_feat = uws_patches.permute(0, 2, 3, 1).reshape(-1, uws*uws, D) # (B * N_uws_patches, uws*uws, D) - (C)
 
-        lws_patches = padded_res.unfold(2, lws, lws).unfold(3, lws, lws) # (B, D, h_lws_patches, w_lws_patches, lws, lws)
+        lws_patches = padded_x.unfold(2, lws, lws).unfold(3, lws, lws) # (B, D, h_lws_patches, w_lws_patches, lws, lws)
         lws_patches = torch.mean(lws_patches, dim=(-2, -1)) # (B, D, h_lws_patches, w_lws_patches)
         lws_patches = F.interpolate(lws_patches, scale_factor=lws//uws, mode='nearest') # (B, D, h_uws_patches, w_uws_patches)
         lws_patches = lws_patches.reshape(B, D, -1)[..., None] # (B, D, N_uws_patches, 1)
@@ -274,7 +274,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('salwnet7-tiny')
+@register('salwnet5-tiny')
 def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     local_window_size=24, mhsa_dim=16, mhsa_head=1, mhsa_layer=2):
@@ -295,7 +295,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
     args.mhsa_layer = mhsa_layer
     return EDSR(args)
 
-@register('salwnet7-light')
+@register('salwnet5-light')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     local_window_size=12, mhsa_dim=32, mhsa_head=1, mhsa_layer=3):
@@ -316,7 +316,8 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     args.mhsa_layer = mhsa_layer
     return EDSR(args)
 
-@register('salwnet7-baseline')
+
+@register('salwnet5-baseline')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        local_window_size=12, mhsa_dim=64, mhsa_head=4, mhsa_layer=6):
@@ -338,7 +339,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('salwnet7')
+@register('salwnet5')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               local_window_size=12, mhsa_dim=128, mhsa_head=6, mhsa_layer=8):
