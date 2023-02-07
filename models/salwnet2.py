@@ -126,7 +126,7 @@ class EDSR(nn.Module):
         m_body.append(conv(n_feats, n_feats, kernel_size))
 
         self.head = nn.Sequential(*m_head)
-        # self.body = nn.Sequential(*m_body)
+        self.body = nn.Sequential(*m_body)
 
         if args.no_upsampling:
             self.out_dim = n_feats
