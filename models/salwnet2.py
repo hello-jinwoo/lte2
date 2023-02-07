@@ -14,6 +14,7 @@ from models import register
 
 """
 ScaleAdaptiveLocalWindow network (SALWnet)
+v1 -> v2: add pos_enc
 """
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True):
