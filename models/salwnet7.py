@@ -138,7 +138,7 @@ class EDSR(nn.Module):
 
             self.tail = nn.Sequential(nn.Conv2d(args.mhsa_dim, n_feats, 31, 1, 15),
                                       nn.LeakyReLU(inplace=True),
-                                      nn.Conv2d(args.mhsa_dim, n_feats, 31, 1, 15),
+                                      nn.Conv2d(n_feats, n_feats, 31, 1, 15),
                                       nn.LeakyReLU(inplace=True),
                                       nn.Conv2d(n_feats, self.out_dim, 1))
 
@@ -315,7 +315,6 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     args.mhsa_head = mhsa_head
     args.mhsa_layer = mhsa_layer
     return EDSR(args)
-
 
 @register('salwnet7-baseline')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
