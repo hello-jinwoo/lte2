@@ -184,12 +184,12 @@ class EDSR(nn.Module):
     def forward(self, x, scale_factor=None, size=None, mode='test'): 
         x = self.head(x)
 
-        # res = self.body(x)
-        # res += x
+        res = self.body(x)
+        res += x
 
         B,D,h,w = x.size()
 
-        up_x = self.imresize(x=x,
+        up_x = self.imresize(x=res,
                              scale_factor=scale_factor,
                              size=size)
         _,_,H,W = up_x.size()
