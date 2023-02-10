@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug_salwnet",
+            "name": "debug_liff_geo",
             "type": "python",
             "request": "launch",
-            "program": "train4.py",
+            "program": "train1.py",
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
-                "--config=configs/train_salwnet1-light-multi.yaml", "--gpu=1,2"
+                "--config=configs/v1.yaml", "--gpu=2"
             ]
         }
     ]

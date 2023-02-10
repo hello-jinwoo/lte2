@@ -2,7 +2,7 @@ train_dataset:
   dataset:
     name: image-folder
     args:
-      root_path: ../dataset/DIV2K_train_HR
+      root_path: ./load/DIV2K_train_HR
       repeat: 20
       cache: in_memory
   wrapper:
@@ -10,9 +10,7 @@ train_dataset:
     args:
       inp_size : 48
       gt_size: 192
-      scale_max: 4
       augment: true
-      sample_q: 2304
   batch_size: 16
 
 data_norm:
@@ -20,17 +18,10 @@ data_norm:
   gt: {sub: [0.5], div: [0.5]}
 
 model:
-  name: liif
+  name: salwnet7-baseline
   args:
-    encoder_spec:
-      name: edsr-baseline
-      args:
-        no_upsampling: true
-    imnet_spec:
-      name: mlp
-      args:
-        out_dim: 3
-        hidden_list: [256, 256, 256, 256]
+    scale: 4
+    upsample_mode: 'bicubic'
 
 optimizer:
   name: adam
@@ -44,6 +35,10 @@ multi_step_lr:
 epoch_val: 5
 epoch_save: 100
 
-mode : 0
-is_resume : False
-resume: ./save/_train_edsr-baseline-liif/epoch-last.pth
+scale:
+  mode: 'multi_arbitrary'
+  factor_range: [1, 4]
+  
+
+is_resume : True
+resume: ./save/train_salwnet6-baseline-multi/epoch-last.pth

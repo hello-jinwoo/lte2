@@ -16,7 +16,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 import datasets
 import models
 import utils
-from test import eval_psnr
+# from test import eval_psnr
 from test import batched_predict
 
 import random
