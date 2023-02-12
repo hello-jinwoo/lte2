@@ -12,7 +12,7 @@
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
-                "--config=configs/v1.yaml", "--gpu=2"
+                "--config=configs/train_edsr-baseline-liif-geo2.yaml", "--gpu=2,3"
             ]
         }
     ]
