@@ -1,0 +1,54 @@
+train_dataset:
+  dataset:
+    name: image-folder
+    args:
+      root_path: ../dataset/DIV2K_train_HR
+      repeat: 20
+      cache: in_memory
+  wrapper:
+    name: sr-bicubic
+    args:
+      inp_size : 48
+      gt_size: 192
+      scale_max: 4
+      augment: true
+      sample_q: 2304
+  batch_size: 16
+
+data_norm:
+  inp: {sub: [0.5], div: [0.5]}
+  gt: {sub: [0.5], div: [0.5]}
+
+model:
+  name: liif-geo3
+  args:
+    encoder_spec:
+      name: edsr-baseline
+      args:
+        no_upsampling: true
+    imnet_spec:
+      name: mlp
+      args:
+        out_dim: 3
+        hidden_list: [256, 256, 256, 256]
+    local_ensemble: False
+    feat_unfold: True
+    cell_decode: False
+
+optimizer:
+  name: adam
+  args:
+    lr: 1.e-4
+epoch_max: 1000
+multi_step_lr:
+  milestones: [200, 400, 600, 800]
+  gamma: 0.5
+
+epoch_val: 5
+epoch_save: 100
+
+eval_bsize: 1
+
+mode : 0
+is_resume : False
+resume: ./save/train_edsr-baseline-liif-geo3/epoch-last.pth
