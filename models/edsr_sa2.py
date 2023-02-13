@@ -11,6 +11,9 @@ import torch.nn.functional as F
 
 from models import register
 
+'''
+edsr_sa -> v2 : learnable slot
+'''
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True):
     return nn.Conv2d(
@@ -111,8 +114,11 @@ class SlotAttention(nn.Module):
         self.eps = eps
 
         # slot initialize
-        self.slots_mu = nn.Parameter(torch.randn(1, 1, self.slot_dim))
-        self.slots_sigma = nn.Parameter(torch.abs(torch.randn(1, 1, self.slot_dim)))
+        if args.slot_init_mode == 'gaussian':
+            self.slots_mu = nn.Parameter(torch.randn(1, 1, self.slot_dim))
+            self.slots_sigma = nn.Parameter(torch.abs(torch.randn(1, 1, self.slot_dim)))
+        elif args.slot_init_mode == 'learnable':
+            self.slots = nn.Parameter(torch.randn(1, 1, self.slot_dim))
 
         self.norm_input = nn.LayerNorm(self.input_dim)
         self.norm_slots = nn.LayerNorm(self.slot_dim)
@@ -143,7 +149,10 @@ class SlotAttention(nn.Module):
         # original initialize of slots
         mu = self.slots_mu.expand(B, K, -1)         # [B,K,slot_dim]
         sigma = self.slots_sigma.expand(B, K, -1)   # [B,K,slot_dim]
-        slots = torch.normal(mu, sigma)             # [B,K,slot_dim]
+        if self.args.slot_init_mode == 'gaussian':
+            slots = torch.normal(mu, sigma)             # [B,K,slot_dim]
+        elif self.args.slot_init_mode == 'gaussian':
+            slots = self.slots
 
         inputs = self.norm_input(inputs)
 
@@ -316,7 +325,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-tiny-sa')
+@register('edsr-tiny-sa2')
 def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     slot_num=6, slot_iters=3, slot_attn_heads=1,
@@ -342,7 +351,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
 
     return EDSR(args)
 
-@register('edsr-light-sa')
+@register('edsr-light-sa2')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     slot_num=8, slot_iters=3, slot_attn_heads=1,
@@ -369,7 +378,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-sa')
+@register('edsr-baseline-sa2')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        slot_num=10, slot_iters=3, slot_attn_heads=2,
@@ -396,7 +405,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-sa')
+@register('edsr-sa2')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               slot_num=10, slot_iters=3, slot_attn_heads=4,
