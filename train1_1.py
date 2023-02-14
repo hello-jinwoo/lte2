@@ -25,10 +25,46 @@ from bicubic_pytorch import core
 
 # from utils import to_pixel_samples
 
+'''
+v1 -> v1_1 : batched output
+'''
 
+def batched_output(model, input, scale_factor, mode, option='non-overlap', input_size=48):
+    B, _, h, w = input.size()
+    input_size = min(input_size, h, w)
+    
+    pad_w = 0
+    if w % input_size > 0:
+        pad_w = input_size - w % input_size
+    pad_h = 0
+    if h % input_size > 0:
+        pad_h = input_size - h % input_size
+    pad_size = [0, pad_w, 0, pad_h]
+    h_padded = h + pad_size[3]
+    w_padded = w + pad_size[1]
+    input = F.pad(input, pad_size, mode='reflect')
 
+    H, W = int(h * scale_factor), int(w * scale_factor)
+    H_padded, W_padded = int(h_padded * scale_factor), int(w_padded * scale_factor)
+    output = torch.zeros(B, 3, H_padded, W_padded).to(input.device)
 
+    if option == 'overlap':
+        pass
 
+    elif option == 'non-overlap':
+        for i_h in range(0, h_padded, input_size):
+            for i_w in range(0, w_padded, input_size):
+                input_patch = input[:, :, i_h: i_h + input_size, i_w: i_w + input_size]
+                output_patch = model(x=(input_patch - 0.5) / 0.5, 
+                                     scale_factor=scale_factor, 
+                                     mode='test')
+                out_h_start = int(i_h  * scale_factor)
+                out_h_end = int((i_h + input_size) * scale_factor)
+                out_w_start = int(i_w * scale_factor)
+                out_w_end = int((i_w + input_size) * scale_factor)
+                output[:, :, out_h_start:out_h_end , out_w_start:out_w_end] = output_patch
+
+    return output[:, :, :H, :W]
 
 def to_pixel_samples(img):
     """ Convert the image to coord-RGB pairs.
@@ -125,8 +161,13 @@ def eval(model, data_name, save_dir, scale_factor=4):
             cell[:, :, 1] *= 2 / gt_tensor.shape[-1]
             cell_factor = max(scale_factor/4, 1)
 
-            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
-            output = output.view(1,new_h,new_w,3).permute(0,3,1,2)
+            # output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
+            # output = output.view(1,new_h,new_w,3).permute(0,3,1,2)
+            output = batched_output(model=model,
+                                    input=input_tensor, 
+                                    scale_factor=scale_factor,
+                                    mode='test')
+            output = output * 0.5 + 0.5
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
