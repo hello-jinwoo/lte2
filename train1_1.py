@@ -166,17 +166,18 @@ def eval(model, data_name, save_dir, scale_factor=4):
         blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
 
         with torch.no_grad():
-            hr_coord, hr_rgb = to_pixel_samples(gt_tensor.contiguous())
-            hr_coord = hr_coord.unsqueeze(0).repeat(gt_tensor.size(0),1,1)
-            cell = torch.ones_like(hr_coord)
-            cell[:, :, 0] *= 2 / gt_tensor.shape[-2]
-            cell[:, :, 1] *= 2 / gt_tensor.shape[-1]
-            cell_factor = max(scale_factor/4, 1)
+            # hr_coord, hr_rgb = to_pixel_samples(gt_tensor.contiguous())
+            # hr_coord = hr_coord.unsqueeze(0).repeat(gt_tensor.size(0),1,1)
+            # cell = torch.ones_like(hr_coord)
+            # cell[:, :, 0] *= 2 / gt_tensor.shape[-2]
+            # cell[:, :, 1] *= 2 / gt_tensor.shape[-1]
+            # cell_factor = max(scale_factor/4, 1)
 
             # output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
             # output = output.view(1,new_h,new_w,3).permute(0,3,1,2)
             output = batched_output(model=model,
                                     input=input_tensor, 
+                                    gt_img=gt_tensor,
                                     scale_factor=scale_factor,
                                     mode='test',
                                     input_size=48)
