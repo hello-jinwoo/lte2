@@ -35,7 +35,7 @@ model:
     feat_unfold: True
     cell_decode: True
     attn_ensemble: True
-    n_refs: 4
+    n_refs: 8
     attn_ref_mode: 'random'
 
 optimizer:
@@ -47,7 +47,7 @@ multi_step_lr:
   milestones: [200, 400, 600, 800]
   gamma: 0.5
 
-epoch_val: 1
+epoch_val: 5
 epoch_save: 100
 
 eval_bsize: 1

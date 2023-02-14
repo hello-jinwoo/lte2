@@ -125,7 +125,7 @@ def eval(model, data_name, save_dir, scale_factor=4):
             cell[:, :, 1] *= 2 / gt_tensor.shape[-1]
             cell_factor = max(scale_factor/4, 1)
 
-            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
+            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=5000)
             output = output.view(1,new_h,new_w,3).permute(0,3,1,2)
             output = output * 0.5 + 0.5
 
