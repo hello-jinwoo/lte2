@@ -12,6 +12,7 @@ import torch.nn as nn
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
+import torch.nn.functional as F
 
 import datasets
 import models
@@ -29,7 +30,7 @@ from bicubic_pytorch import core
 v1 -> v1_1 : batched output
 '''
 
-def batched_output(model, input, scale_factor, mode, option='non-overlap', input_size=48):
+def batched_output(model, input, gt_img, scale_factor, mode, option='non-overlap', input_size=48):
     B, _, h, w = input.size()
     input_size = min(input_size, h, w)
     
@@ -54,14 +55,25 @@ def batched_output(model, input, scale_factor, mode, option='non-overlap', input
     elif option == 'non-overlap':
         for i_h in range(0, h_padded, input_size):
             for i_w in range(0, w_padded, input_size):
-                input_patch = input[:, :, i_h: i_h + input_size, i_w: i_w + input_size]
-                output_patch = model(x=(input_patch - 0.5) / 0.5, 
-                                     scale_factor=scale_factor, 
-                                     mode='test')
                 out_h_start = int(i_h  * scale_factor)
                 out_h_end = int((i_h + input_size) * scale_factor)
                 out_w_start = int(i_w * scale_factor)
                 out_w_end = int((i_w + input_size) * scale_factor)
+
+                gt_patch = gt_img[:, :, out_h_start: out_h_end, out_w_start: out_w_end]
+                _,_, new_h, new_w = gt_patch.size()
+
+                hr_coord, hr_rgb = to_pixel_samples(gt_patch.contiguous())
+                hr_coord = hr_coord.unsqueeze(0).repeat(gt_patch.size(0),1,1)
+                cell = torch.ones_like(hr_coord)
+                cell[:, :, 0] *= 2 / gt_patch.shape[-2]
+                cell[:, :, 1] *= 2 / gt_patch.shape[-1]
+                cell_factor = max(scale_factor/4, 1)
+
+                input_patch = input[:, :, i_h: i_h + input_size, i_w: i_w + input_size]
+                output_patch = batched_predict(model, ((input_patch - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
+                output_patch = output_patch.view(1,new_h,new_w,3).permute(0,3,1,2)
+                
                 output[:, :, out_h_start:out_h_end , out_w_start:out_w_end] = output_patch
 
     return output[:, :, :H, :W]
@@ -166,8 +178,8 @@ def eval(model, data_name, save_dir, scale_factor=4):
             output = batched_output(model=model,
                                     input=input_tensor, 
                                     scale_factor=scale_factor,
-                                    mode='test')
-            output = output * 0.5 + 0.5
+                                    mode='test',
+                                    input_size=48)
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            

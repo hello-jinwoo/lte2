@@ -95,9 +95,7 @@ class LIIF(nn.Module):
             ref_feats = ref_feats.reshape(B, h*w, self.n_refs, D) # (B, h*w, n_refs, D)
 
             _ref_relative_coords = ref_coords - pixel_coord_1d.expand(B, h*w, self.n_refs)
-            # _ref_relative_coords = _ref_relative_coords.reshape(B, h, w, self.n_refs)
             ref_relative_coords = torch.zeros(B, h*w, self.n_refs, 2) # (B, h*w, n_refs, 2)
-            # ref_relative_coords = torch.zeros(B, h, w, self.n_refs, 2) # (B, h, w, n_refs, 2)
             ref_relative_coords[..., 0] = (_ref_relative_coords // h) / h
             ref_relative_coords[..., 1] = (_ref_relative_coords % h) / w
             # ref_relative_coords = (ref_relative_coords - 0.5) * 2 # -1~1
