@@ -180,7 +180,7 @@ def eval(model, data_name, save_dir, scale_factor=4):
                                     gt_img=gt_tensor,
                                     scale_factor=scale_factor,
                                     mode='test',
-                                    input_size=48)
+                                    input_size=96)
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
@@ -304,27 +304,6 @@ def main(config_, save_path):
 
     for epoch in range(epoch_start, epoch_max + 1):
     
-        if (epoch_val is not None) and (epoch == 1):
-            if n_gpus > 1 and (config.get('eval_bsize') is not None):
-                model_ = model.module
-            else:
-                model_ = model
-
-            scale_factors = [2,3,4,6,8,12]
-            model.eval()
-
-            for sf in scale_factors:
-                val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf)
-                val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf)
-                if sf == 4:
-                    val_sf4 = val_res_set14
-                log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
-
-            model.train()
-            if val_sf4 > max_val_v:
-                max_val_v = val_sf4
-                torch.save(sv_file, os.path.join(save_path, 'epoch-best.pth'))
-
         t_epoch_start = timer.t()
         log_info = ['epoch {}/{}'.format(epoch, epoch_max)]
 
