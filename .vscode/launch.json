@@ -8,7 +8,7 @@
             "name": "debug_liif",
             "type": "python",
             "request": "launch",
-            "program": "train1.py",
+            "program": "train1_1.py",
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
