@@ -285,16 +285,14 @@ class EDSR(nn.Module):
         x = torch.cat([body_feat, slot_feat], dim=1) # (B, D + D`, h, w)
 
         if self.args.no_upsampling:
-            up_x = x
+            return x, attn_sftmx
         else:
             up_x = self.imresize(x=x,
                                  scale_factor=scale_factor,
                                  size=size)
 
             x = self.tail(up_x)
-            # x = self.tail(res)
-        #x = self.add_mean(x)
-        return x
+            return x
 
     def load_state_dict(self, state_dict, strict=True):
         own_state = self.state_dict()

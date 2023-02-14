@@ -11,17 +11,23 @@ train_dataset:
       inp_size : 48
       gt_size: 192
       augment: true
-  batch_size: 4
+  batch_size: 16
 
 data_norm:
   inp: {sub: [0.5], div: [0.5]}
   gt: {sub: [0.5], div: [0.5]}
 
 model:
-  name: salwnet1-tiny
+  name: edsr-baseline-sa2
   args:
     scale: 4
     upsample_mode: 'bicubic'
+    slot_num: 20
+    slot_iters: 3
+    slot_attn_heads: 1
+    slot_dim: 128
+    slot_mlp_hid_dim: 64
+    slot_init_mode: 'learnable'
 
 optimizer:
   name: adam
@@ -41,4 +47,4 @@ scale:
   
 
 is_resume : False
-resume: ./save/_train_salwnet1-light-multi/epoch-last.pth
+resume: ./save/_train_edsr-baseline-multi_sa2_large/epoch-last.pth

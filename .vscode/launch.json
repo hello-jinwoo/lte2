@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug_liff_geo",
+            "name": "debug_liif",
             "type": "python",
             "request": "launch",
             "program": "train1.py",
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
-                "--config=configs/train_edsr-baseline-liif-geo2.yaml", "--gpu=2,3"
+                "--config=configs/train_edsr-baseline-liif-sa.yaml", "--gpu=0"
             ]
         }
     ]

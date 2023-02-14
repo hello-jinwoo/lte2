@@ -147,12 +147,12 @@ class SlotAttention(nn.Module):
         N_heads = self.num_heads
 
         # original initialize of slots
-        mu = self.slots_mu.expand(B, K, -1)         # [B,K,slot_dim]
-        sigma = self.slots_sigma.expand(B, K, -1)   # [B,K,slot_dim]
         if self.args.slot_init_mode == 'gaussian':
+            mu = self.slots_mu.expand(B, K, -1)         # [B,K,slot_dim]
+            sigma = self.slots_sigma.expand(B, K, -1)   # [B,K,slot_dim]
             slots = torch.normal(mu, sigma)             # [B,K,slot_dim]
-        elif self.args.slot_init_mode == 'gaussian':
-            slots = self.slots
+        elif self.args.slot_init_mode == 'learnable':
+            slots = self.slots.expand(B, K, -1)
 
         inputs = self.norm_input(inputs)
 
@@ -228,7 +228,7 @@ class EDSR(nn.Module):
         self.body = nn.Sequential(*m_body)
 
         if args.no_upsampling:
-            self.out_dim = n_feats
+            self.out_dim = n_feats + args.slot_dim
         else:
             self.out_dim = args.n_colors
             # define tail module
@@ -289,21 +289,19 @@ class EDSR(nn.Module):
         # slots (B, K, D`)
 
         slot_feat = torch.einsum('bnk,bkd->bnd', attn_sftmx, slots) # (B, h*w, D`)
-        slot_feat = slot_feat.permute(0, 2, 1).reshape(B, D, h, w) # (B, D`, h, w)
+        slot_feat = slot_feat.permute(0, 2, 1).reshape(B, -1, h, w) # (B, D`, h, w)
 
         x = torch.cat([body_feat, slot_feat], dim=1) # (B, D + D`, h, w)
 
         if self.args.no_upsampling:
-            up_x = x
+            return x, attn_sftmx
         else:
             up_x = self.imresize(x=x,
                                  scale_factor=scale_factor,
                                  size=size)
 
             x = self.tail(up_x)
-            # x = self.tail(res)
-        #x = self.add_mean(x)
-        return x
+            return x
 
     def load_state_dict(self, state_dict, strict=True):
         own_state = self.state_dict()
@@ -329,7 +327,7 @@ class EDSR(nn.Module):
 def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     slot_num=6, slot_iters=3, slot_attn_heads=1,
-                    slot_dim=16, slot_mlp_hid_dim=16):
+                    slot_dim=16, slot_mlp_hid_dim=16, slot_init_mode='learnable'):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -348,6 +346,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
     args.slot_attn_heads = slot_attn_heads
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
+    args.slot_init_mode = slot_init_mode
 
     return EDSR(args)
 
@@ -355,7 +354,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     slot_num=8, slot_iters=3, slot_attn_heads=1,
-                    slot_dim=32, slot_mlp_hid_dim=32):
+                    slot_dim=32, slot_mlp_hid_dim=32, slot_init_mode='learnable'):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -374,6 +373,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     args.slot_attn_heads = slot_attn_heads
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
+    args.slot_init_mode = slot_init_mode
 
     return EDSR(args)
 
@@ -382,7 +382,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        slot_num=10, slot_iters=3, slot_attn_heads=2,
-                       slot_dim=64, slot_mlp_hid_dim=64):
+                       slot_dim=64, slot_mlp_hid_dim=64, slot_init_mode='learnable'):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -401,6 +401,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     args.slot_attn_heads = slot_attn_heads
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
+    args.slot_init_mode = slot_init_mode
 
     return EDSR(args)
 
@@ -409,7 +410,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               slot_num=10, slot_iters=3, slot_attn_heads=4,
-              slot_dim=128, slot_mlp_hid_dim=128):
+              slot_dim=128, slot_mlp_hid_dim=128, slot_init_mode='learnable'):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -428,5 +429,6 @@ def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2,
     args.slot_attn_heads = slot_attn_heads
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
+    args.slot_init_mode = slot_init_mode
     
     return EDSR(args)
