@@ -73,13 +73,14 @@ class LIIF(nn.Module):
             pixel_coord [..., 0] *= h
             pixel_coord [..., 1] *= w
             pixel_coord = pixel_coord.long() # (B, N, 2)
-            pixel_coord = torch.clip(pixel_coord, 0, h-1)
-            pixel_coord_1d = pixel_coord[..., 0:1] * h + pixel_coord[..., 1:2] # (B, N, 1)
+            pixel_coord = torch.clip(pixel_coord, 0, w*h-1)
+            pixel_coord_1d = pixel_coord[..., 0] * h + pixel_coord[..., 1] # (B, N)
+            pixel_coord_1d_list = [(b, int(pixel_coord_1d[b][i])) for b in range(B) for i in range(N)]
 
-            segm_idx = pixel_coord_1d[..., 0]
+            segm_idx_whole = torch.max(attn_sftmx, dim=2).indices # (B, h*w)
+            segm_idx = segm_idx_whole[list(torch.tensor(pixel_coord_1d_list).T)].reshape(B, N) # (B, N)
             segm_idx_list = [(b, int(segm_idx[b][i])) for b in range(B) for i in range(N)]
             pixel_segm_prob_map = attn_sftmx.permute(0, 2, 1)[list(torch.tensor(segm_idx_list).T)] # (B*N, h*w)
-            pixel_segm_prob_map = pixel_segm_prob_map[pixel_coord_1d.reshape(B*h*w, 1)] # to be (B*N, 1, h*w)
             pixel_segm_prob_map = pixel_segm_prob_map.reshape(B, N, h*w) # (B, N, h*w)
             if self.attn_ref_mode == 'random':
                 rand_prob = torch.rand_like(pixel_segm_prob_map)
@@ -95,7 +96,7 @@ class LIIF(nn.Module):
             ref_feats = feat_reshaped[ref_coords.reshape(-1, self.n_refs)] # (B*N, n_refs, D)
             ref_feats = ref_feats.reshape(B, N, self.n_refs, D) # (B, N, n_refs, D)
 
-            _ref_relative_coords = ref_coords - pixel_coord_1d.expand(B, N, self.n_refs)
+            _ref_relative_coords = ref_coords - pixel_coord_1d[..., None].expand(B, N, self.n_refs)
             ref_relative_coords = torch.zeros(B, N, self.n_refs, 2) # (B, N, n_refs, 2)
             ref_relative_coords[..., 0] = (_ref_relative_coords // h) / h
             ref_relative_coords[..., 1] = (_ref_relative_coords % h) / w
