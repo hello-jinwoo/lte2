@@ -275,7 +275,7 @@ class SlotDecoder(nn.Module):
         x = x.reshape(-1, x.shape[-1]).unsqueeze(1).unsqueeze(2)
         x = x.repeat((1, self.dec_init_size[0], self.dec_init_size[1], 1))
 
-        x = self.decoder_pos(x)
+        # x = self.decoder_pos(x)
         x = x.permute(0, 3, 1, 2)
         x = self.deconvs(x)
         x = x[:, :, : self.resolution[0], : self.resolution[1]]
