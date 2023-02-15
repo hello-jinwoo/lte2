@@ -396,8 +396,13 @@ class EDSR(nn.Module):
             x = self.tail(up_x)
 
             if self.args.joint_lr_recon and mode == 'train':
-                lr_recon = self.lr_recon_tail(slots)
-                return x, lr_recon
+                lr_recon = self.lr_recon_tail(slots, target_size=(h,w))
+                recons, masks = lr_recon.reshape(B, -1, lr_recon.shape[1], lr_recon.shape[2], lr_recon.shape[3]
+                        ).split([3, 1], dim=-1)
+                masks = nn.Softmax(dim=1)(masks)
+                recon_combined = torch.sum(recons * masks, dim=1)  # Recombine image.
+                recon_combined = recon_combined.permute(0, 3, 1, 2)
+                return x, recon_combined
             else:
                 return x
 
