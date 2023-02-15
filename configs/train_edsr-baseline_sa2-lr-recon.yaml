@@ -31,6 +31,7 @@ model:
     joint_lr_recon: True
     slot_dec_hid_dim: 64
     slot_dec_upsample_step: 3
+    slot_dec_depth: 6
 
 optimizer:
   name: adam
