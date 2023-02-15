@@ -395,7 +395,7 @@ class EDSR(nn.Module):
 
             x = self.tail(up_x)
 
-            if self.args.joint_lr_recon:
+            if self.args.joint_lr_recon and mode == 'train':
                 lr_recon = self.lr_recon_tail(slots)
                 return x, lr_recon
             else:
