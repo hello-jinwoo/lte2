@@ -29,6 +29,8 @@ model:
     slot_mlp_hid_dim: 64
     slot_init_mode: 'learnable'
     joint_lr_recon: True
+    slot_dec_hid_dim: 64
+    slot_dec_upsample_step: 3
 
 optimizer:
   name: adam
