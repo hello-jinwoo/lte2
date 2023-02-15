@@ -127,14 +127,14 @@ class EDSR(nn.Module):
         self.head = nn.Sequential(*m_head)
         self.body = nn.Sequential(*m_body)
 
+        mhsa_encoder_layer = nn.TransformerEncoderLayer(d_model=args.mhsa_dim, nhead=args.mhsa_head, batch_first=True)
+        self.mhsa_before_tail = nn.TransformerEncoder(mhsa_encoder_layer, num_layers=args.mhsa_layer)
+        
         if args.no_upsampling:
             self.out_dim = n_feats
         else:
             self.out_dim = args.n_colors
             # define tail module
-            
-            mhsa_encoder_layer = nn.TransformerEncoderLayer(d_model=args.mhsa_dim, nhead=args.mhsa_head, batch_first=True)
-            self.mhsa_before_tail = nn.TransformerEncoder(mhsa_encoder_layer, num_layers=args.mhsa_layer)
 
             self.tail = nn.Sequential(nn.Conv2d(args.mhsa_dim, n_feats, 3, 1, 1),
                                       nn.LeakyReLU(inplace=True),
@@ -272,11 +272,14 @@ class EDSR(nn.Module):
 
         res = res + x
 
-        up_x = self.imresize(x=res,
-                             scale_factor=scale_factor,
-                             size=size)
+        if self.args.no_upsampling:
+            x = res
+        else:
+            up_x = self.imresize(x=res,
+                                scale_factor=scale_factor,
+                                size=size)
 
-        x = self.tail(up_x) # (B, D, H, W)
+            x = self.tail(up_x) # (B, D, H, W)
 
         return x
 
@@ -300,7 +303,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('salwnet5-tiny')
+@register('salwnet8-tiny')
 def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     local_window_size=24, mhsa_dim=16, mhsa_head=1, mhsa_layer=2):
@@ -321,7 +324,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
     args.mhsa_layer = mhsa_layer
     return EDSR(args)
 
-@register('salwnet6-light')
+@register('salwnet8-light')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     local_window_size=12, mhsa_dim=32, mhsa_head=1, mhsa_layer=3):

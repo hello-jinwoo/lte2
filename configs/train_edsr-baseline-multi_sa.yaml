@@ -27,6 +27,8 @@ model:
     slot_attn_heads: 1
     slot_dim: 64
     slot_mlp_hid_dim: 64
+    slot_init_mode: 'random'
+    joint_lr_recon: False
 
 optimizer:
   name: adam

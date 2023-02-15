@@ -2,7 +2,7 @@
 
 import math
 from argparse import Namespace
-
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -195,6 +195,93 @@ class SlotAttention(nn.Module):
 
         return attn_sftmx, slots
 
+class SoftPositionEmbed(nn.Module):
+    def __init__(self, hidden_size, resolution, device):
+        """Builds the soft position embedding layer.
+        Args:
+        hidden_size: Size of input feature dimension.
+        resolution: Tuple of integers specifying width and height of grid.
+        """
+        super().__init__()
+        self.device = device
+        self.embedding = nn.Linear(4, hidden_size, bias=True)
+        self.grid = build_grid(resolution)
+
+    def forward(self, inputs):
+        # self.grid = self.grid.to(inputs.device)
+        self.grid = self.grid.to(self.device)
+        grid = self.embedding(self.grid)
+        return inputs + grid
+
+    def get_pos_emb(self, pos):
+        """ 
+        pos (*, 2)
+        """
+        return self.embedding(torch.cat([pos, 1.0 - pos], dim=-1))
+
+class SlotDecoder(nn.Module):
+
+    def __init__(self, args, device='cuda'):
+        super().__init__()
+
+        D_slot = args.slot_dim
+        D_hid = args.slot_dec_hid_dim 
+        
+        upsample_step = args.slot_dec_upsample_step
+        self.upsample_step = upsample_step
+        
+        
+        # dec_init_resolution = (self.dec_init_size, self.dec_init_size)
+        # self.decoder_pos = SoftPositionEmbed(cfg.MODEL.SLOT.DIM, dec_init_resolution, device)
+        
+        count_layer = 0 
+
+        deconvs = nn.ModuleList()
+        for _ in range(upsample_step):
+            if count_layer == 0: 
+                deconvs.extend([
+                    nn.ConvTranspose2d(D_slot, D_hid, 5, stride=(2, 2), padding=2, output_padding=1),
+                    nn.ReLU(),
+                ])
+            else: 
+                deconvs.extend([
+                        nn.ConvTranspose2d(D_hid, D_hid, 5, stride=(2, 2), padding=2, output_padding=1),
+                        nn.ReLU(),
+                ])
+            
+            count_layer += 1
+
+        for _ in range(args.slot_dec_depth - upsample_step - 1):
+            
+            if count_layer == 0: 
+                deconvs.extend([nn.ConvTranspose2d(D_slot, D_hid, 5, stride=(1, 1), padding=2), nn.ReLU()])
+            else: 
+                deconvs.extend([nn.ConvTranspose2d(D_hid, D_hid, 5, stride=(1, 1), padding=2), nn.ReLU()])
+
+            count_layer += 1
+
+        deconvs.append(nn.ConvTranspose2d(D_hid, 4, 3, stride=(1, 1), padding=1))
+        count_layer += 1
+
+        assert args.slot_dec_depth == count_layer, "The number of layers of decoder differs from the configuration"
+
+        self.deconvs = nn.Sequential(*deconvs)
+
+    def forward(self, x, target_size=(48, 48)):
+        # """Broadcast slot features to a 2D grid and collapse slot dimension.""".
+        self.resolution = target_size
+        self.dec_init_size = (target_size[0] // 2**self.upsample_step, target_size[1] // 2**self.upsample_step)
+
+        x = x.reshape(-1, x.shape[-1]).unsqueeze(1).unsqueeze(2)
+        x = x.repeat((1, self.dec_init_size[0], self.dec_init_size[1], 1))
+
+        x = self.decoder_pos(x)
+        x = x.permute(0, 3, 1, 2)
+        x = self.deconvs(x)
+        x = x[:, :, : self.resolution[0], : self.resolution[1]]
+        x = x.permute(0, 2, 3, 1)
+        return x
+
 
 class EDSR(nn.Module):
     def __init__(self, args, conv=default_conv):
@@ -236,6 +323,9 @@ class EDSR(nn.Module):
             self.tail = nn.Sequential(nn.Conv2d(n_feats + args.slot_dim, n_feats, 3, 1, 1),
                                                 nn.LeakyReLU(inplace=True), 
                                                 nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
+            
+            if self.args.joint_lr_recon:
+                self.lr_recon_tail = SlotDecoder(args)
             
         self.slot_attention = SlotAttention(args)
 
@@ -294,14 +384,22 @@ class EDSR(nn.Module):
         x = torch.cat([body_feat, slot_feat], dim=1) # (B, D + D`, h, w)
 
         if self.args.no_upsampling:
-            return x, attn_sftmx
+            if self.args.return_attn:
+                return x, attn_sftmx
+            else:
+                return x
         else:
             up_x = self.imresize(x=x,
                                  scale_factor=scale_factor,
                                  size=size)
 
             x = self.tail(up_x)
-            return x
+
+            if self.args.joint_lr_recon:
+                lr_recon = self.lr_recon_tail(slots)
+                return x, lr_recon
+            else:
+                return x
 
     def load_state_dict(self, state_dict, strict=True):
         own_state = self.state_dict()
@@ -327,7 +425,7 @@ class EDSR(nn.Module):
 def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     slot_num=6, slot_iters=3, slot_attn_heads=1,
-                    slot_dim=16, slot_mlp_hid_dim=16, slot_init_mode='learnable'):
+                    slot_dim=16, slot_mlp_hid_dim=16, slot_init_mode='learnable', return_attn=True):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -347,6 +445,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
     args.slot_init_mode = slot_init_mode
+    args.return_attn = return_attn
 
     return EDSR(args)
 
@@ -354,7 +453,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     slot_num=8, slot_iters=3, slot_attn_heads=1,
-                    slot_dim=32, slot_mlp_hid_dim=32, slot_init_mode='learnable'):
+                    slot_dim=32, slot_mlp_hid_dim=32, slot_init_mode='learnable', return_attn=True):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -374,6 +473,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
     args.slot_init_mode = slot_init_mode
+    args.return_attn = return_attn
 
     return EDSR(args)
 
@@ -382,7 +482,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        slot_num=10, slot_iters=3, slot_attn_heads=2,
-                       slot_dim=64, slot_mlp_hid_dim=64, slot_init_mode='learnable'):
+                       slot_dim=64, slot_mlp_hid_dim=64, slot_init_mode='learnable', return_attn=True):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -402,6 +502,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
     args.slot_init_mode = slot_init_mode
+    args.return_attn = return_attn
 
     return EDSR(args)
 
@@ -410,7 +511,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               slot_num=10, slot_iters=3, slot_attn_heads=4,
-              slot_dim=128, slot_mlp_hid_dim=128, slot_init_mode='learnable'):
+              slot_dim=128, slot_mlp_hid_dim=128, slot_init_mode='learnable', return_attn=True):
     args = Namespace()
     args.n_resblocks = n_resblocks
     args.n_feats = n_feats
@@ -430,5 +531,6 @@ def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2,
     args.slot_dim = slot_dim
     args.slot_mlp_hid_dim = slot_mlp_hid_dim
     args.slot_init_mode = slot_init_mode
+    args.return_attn = return_attn
     
     return EDSR(args)

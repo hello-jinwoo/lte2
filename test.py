@@ -27,6 +27,20 @@ def batched_predict(model, inp, coord, cell, bsize):
         pred = torch.cat(preds, dim=1)
     return pred
 
+def batched_predict_with_sf(model, inp, coord, cell, bsize, scale_factor=4):
+    with torch.no_grad():
+        model.gen_feat(inp, scale_factor=scale_factor)
+        n = coord.shape[1]
+        ql = 0
+        preds = []
+        while ql < n:
+            qr = min(ql + bsize, n)
+            pred = model.query_rgb(coord[:, ql: qr, :], cell[:, ql: qr, :])
+            preds.append(pred)
+            ql = qr
+        pred = torch.cat(preds, dim=1)
+    return pred
+
 
 def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None, window_size=0, scale_max=4, fast=False,
               verbose=False):
