@@ -189,12 +189,12 @@ def train(train_loader, model, optimizer, epoch, config):
         hr_coord, hr_rgb = to_pixel_samples(gt_img.contiguous())
 
         # for gpu save
-        if sample_q is None:
+        if 'sample_q' not in config:
             sample_q = 2304
-        if sample_q == 0:
+        if config['sample_q'] == 0:
             pass
         else:
-            sample_lst = np.random.choice(hr_coord.size(0), sample_q, replace=False)
+            sample_lst = np.random.choice(hr_coord.size(0), config['sample_q'], replace=False)
             hr_coord= hr_coord[sample_lst]
             hr_rgb= hr_rgb[:, sample_lst]
 
