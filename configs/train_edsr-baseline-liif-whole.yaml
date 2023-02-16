@@ -12,7 +12,7 @@ train_dataset:
       gt_size: 192
       scale_max: 4
       augment: true
-      sample_q: 2304
+      sample_q: 0 # 0 means whole image
   batch_size: 16
 
 data_norm:
