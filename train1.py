@@ -175,7 +175,7 @@ def train(train_loader, model, optimizer, epoch, config):
         gt_img = (batch['gt_img'] - inp_sub) / inp_div
     
         if config['mode'] == 0: 
-            if config['factor_range'] is not None:
+            if 'factor_range' in config:
                 sf = random.uniform(config['factor_range'][0] ,config['factor_range'][1]) # floating point
             else:
                 sf = random.uniform(1,4) # floating point
