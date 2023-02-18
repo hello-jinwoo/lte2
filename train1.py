@@ -9,6 +9,7 @@ import imageio.v2 as imageio
 import yaml
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
@@ -28,8 +29,6 @@ from bicubic_pytorch import core
 
 
 
-
-
 def to_pixel_samples(img):
     """ Convert the image to coord-RGB pairs.
         img: Tensor, (3, H, W)
@@ -39,6 +38,46 @@ def to_pixel_samples(img):
     coord = utils.make_coord(img.shape[-2:])
     rgb = img.view(b, 3, -1).permute(0,2, 1)
     return coord, rgb
+
+def to_patch_samples(img, patch_length=3):
+    """ Convert the image to coord-RGB pairs.
+        img: Tensor, (3, H, W)
+    """
+
+    b, _,_,_ = img.size()
+    coord = utils.make_coord(img.shape[-2:])
+    
+    patch_wing_length = (patch_length - 1) // 2
+    shift_list = []
+    for h in range(-patch_wing_length, patch_wing_length+1, 1):
+        for w in range(-patch_wing_length, patch_wing_length+1, 1):
+            shift_list.append((h, w))
+    
+    patched_img = None
+    for (h, w) in shift_list:
+        shifted_img = img.clone()
+        # h-wise shift
+        if h == 0:
+            pass
+        elif h < 0:
+            shifted_img[:, :, -h:, :] = shifted_img[:, :, :h, :]
+        elif h > 0:
+            shifted_img[:, :, :-h, :] = shifted_img[:, :, h:, :]
+        # w-wise shift
+        if w == 0:
+            pass
+        elif w < 0:
+            shifted_img[:, :, :, -w:] = shifted_img[:, :, :, :w]
+        elif w > 0:
+            shifted_img[:, :, :, :-w] = shifted_img[:, :, :, w:]
+        if patched_img == None:
+            patched_img = shifted_img
+        else:
+            patched_img = torch.cat([patched_img, shifted_img], dim=1)
+    # after the above for loop, patched_img => (B, 3*n_pixel_in_patch, H, W)
+    
+    rgb_patch = patched_img.view(b, 3 * patch_length**2, -1).permute(0,2, 1)
+    return coord, rgb_patch
 
 def make_data_loader(spec, tag=''):
     if spec is None:
@@ -90,7 +129,7 @@ def prepare_training():
 
 
 
-def eval(model, data_name, save_dir, scale_factor=4):
+def eval(model, data_name, save_dir, scale_factor=4, config=None):
     model.eval()
     test_path = './load/' + data_name + '/HR'
 
@@ -113,7 +152,7 @@ def eval(model, data_name, save_dir, scale_factor=4):
         # gt = gt[:new_h, :new_w, :]
         gt_tensor = utils.numpy2tensor(gt).cuda()
         gt_tensor, pad = utils.pad_img(gt_tensor, 24*scale_factor)#self.args.size_must_mode*self.args.scale)
-        _,_, new_h, new_w = gt_tensor.size()
+        b, _, new_h, new_w = gt_tensor.size()
         input_tensor = core.imresize(gt_tensor, scale=1/scale_factor)
         blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
 
@@ -126,7 +165,17 @@ def eval(model, data_name, save_dir, scale_factor=4):
             cell_factor = max(scale_factor/4, 1)
 
             output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
-            output = output.view(1,new_h,new_w,3).permute(0,3,1,2)
+            output = output.view(1,new_h,new_w,-1).permute(0,3,1,2)
+
+            if 'query_area' in config and config['query_area'] == 'patch':
+                n_pixels_in_patch = output.shape[1] // 3
+                output = F.pixel_shuffle(output.reshape(b, 3, n_pixels_in_patch, output.shape[2], output.shape[3]).permute(0,2,1,3,4).reshape(output.shape), upscale_factor=config['patch_length']) # (B, 3, n*H, n*W)
+                pad_size = config['patch_length'] // 2 + 1
+                output = F.pad(output, pad=(pad_size, pad_size, pad_size, pad_size), mode='reflect')
+                kernel = torch.ones(1, 1, config['patch_length'], config['patch_length']) / n_pixels_in_patch
+                output = F.conv2d(output.reshape(b*3, 1, output.shape[2], output.shape[3]), kernel.to(output.device), stride=config['patch_length'], dilation=config['patch_length']//2+1) # (B * 3, 1, H, W)
+                output = output.reshape(b, 3, output.shape[2], output.shape[3]) # (B, 3, H, W)
+            
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
@@ -186,15 +235,27 @@ def train(train_loader, model, optimizer, epoch, config):
         inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
         gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
 
-        hr_coord, hr_rgb = to_pixel_samples(gt_img.contiguous())
+        if 'query_area' not in config:
+            query_area = 'pixel'
+        else:
+            if config['query_area'] == 'pixel':
+                query_area = 'pixel'
+            elif config['query_area'] == 'patch':
+                query_area = 'patch'
+        if query_area == 'pixel':
+            hr_coord, hr_rgb = to_pixel_samples(gt_img.contiguous())
+        elif query_area == 'patch':
+            hr_coord, hr_rgb = to_patch_samples(gt_img.contiguous(), patch_length=config['patch_length'])
 
         # for gpu save
         if 'sample_q' not in config:
             sample_q = 2304
-        if config['sample_q'] == 0:
+        else:
+           sample_q = config['sample_q'] 
+        if sample_q == 0:
             pass
         else:
-            sample_lst = np.random.choice(hr_coord.size(0), config['sample_q'], replace=False)
+            sample_lst = np.random.choice(hr_coord.size(0), sample_q, replace=False)
             hr_coord= hr_coord[sample_lst]
             hr_rgb= hr_rgb[:, sample_lst]
 
@@ -254,6 +315,13 @@ def main(config_, save_path):
 
     timer = utils.Timer()
 
+    if n_gpus > 1:
+        model_ = model.module
+    else:
+        model_ = model
+    # test eval
+    eval(model_, 'Set5', save_path, scale_factor=4, config=config)
+
     for epoch in range(epoch_start, epoch_max + 1):
     
         t_epoch_start = timer.t()
@@ -269,10 +337,6 @@ def main(config_, save_path):
         log_info.append('lr={:.4e}'.format(optimizer.param_groups[0]['lr']))
 #         writer.add_scalars('loss', {'train': train_loss}, epoch)
 
-        if n_gpus > 1:
-            model_ = model.module
-        else:
-            model_ = model
         model_spec = config['model']
         model_spec['sd'] = model_.state_dict()
         optimizer_spec = config['optimizer']
@@ -300,8 +364,8 @@ def main(config_, save_path):
             model.eval()
 
             for sf in scale_factors:
-                val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf)
-                val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf)
+                val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf, config=config)
+                val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf, config=config)
                 if sf == 4:
                     val_sf4 = val_res_set14
                 log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))

@@ -8,11 +8,11 @@
             "name": "debug_liif",
             "type": "python",
             "request": "launch",
-            "program": "train1_1.py",
+            "program": "train1.py",
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
-                "--config=configs/train_edsr-tiny-liif-sa.yaml", "--gpu=3"
+                "--config=configs/train_edsr-baseline-liif-patch.yaml", "--gpu=2"
             ]
         }
     ]

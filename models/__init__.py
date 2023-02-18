@@ -16,3 +16,4 @@ from . import salwnet1, salwnet1_1, salwnet2, salwnet3, salwnet4, salwnet5, salw
 from . import liif_geo, liif_geo2, liif_geo3
 from . import edsr_sa, edsr_sa2
 from . import liif_sa
+from . import liif_patch
