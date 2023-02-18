@@ -35,7 +35,7 @@ model:
     feat_unfold: True
     cell_decode: True
     patch_length: 3
-    reference_patch_length: 1
+    reference_patch_length: 2
 
 optimizer:
   name: adam

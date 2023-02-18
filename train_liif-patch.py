@@ -39,6 +39,60 @@ def to_pixel_samples(img):
     rgb = img.view(b, 3, -1).permute(0,2, 1)
     return coord, rgb
 
+def to_patch_samples(img, patch_length=3):
+    """ Convert the image to coord-RGB pairs.
+        img: Tensor, (3, H, W)
+    """
+
+    b, _,_,_ = img.size()
+    coord = utils.make_coord(img.shape[-2:], flatten=False).to(img.device)
+    
+    patch_wing_length = (patch_length - 1) // 2
+    shift_list = []
+    for h in range(-patch_wing_length, patch_wing_length+1, 1):
+        for w in range(-patch_wing_length, patch_wing_length+1, 1):
+            shift_list.append((h, w))
+    
+    patched_img = None
+    patched_coord = None
+    for (h, w) in shift_list:
+        shifted_img = img.clone()
+        shifted_coord = coord.clone()
+
+        # h-wise shift
+        if h == 0:
+            pass
+        elif h < 0:
+            shifted_img[:, :, -h:, :] = shifted_img[:, :, :h, :]
+            shifted_coord[-h:, :] = shifted_coord[:h, :].clone()
+        elif h > 0:
+            shifted_img[:, :, :-h, :] = shifted_img[:, :, h:, :]
+            shifted_coord[:-h, :] = shifted_coord[h:, :].clone()
+        
+        # w-wise shift
+        if w == 0:
+            pass
+        elif w < 0:
+            shifted_img[:, :, :, -w:] = shifted_img[:, :, :, :w]
+            shifted_coord[:, -w:] = shifted_coord[:, :w].clone()
+        elif w > 0:
+            shifted_img[:, :, :, :-w] = shifted_img[:, :, :, w:]
+            shifted_coord[:, :-w] = shifted_coord[:, w:].clone()
+        
+        if patched_img == None:
+            patched_img = shifted_img
+        else:
+            patched_img = torch.cat([patched_img, shifted_img], dim=1)
+        if patched_coord == None:
+            patched_coord = shifted_coord
+        else:
+            patched_coord = torch.cat([patched_coord, shifted_coord], dim=-1)
+    # after the above for loop, patched_img => (B, 3*n_pixel_in_patch, H, W)
+    
+    rgb_patch = patched_img.view(b, 3 * patch_length**2, -1).permute(0, 2, 1)
+    coord = patched_coord.reshape(-1, patched_coord.shape[-1])
+    return coord, rgb_patch
+
 def make_data_loader(spec, tag=''):
     if spec is None:
         return None
@@ -98,6 +152,9 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
     save_path = os.path.join(save_dir,  data_name)
     os.makedirs(save_path, exist_ok=True)
     total_psnrs = []
+    
+    patch_length = config['model']['args']['patch_length']
+    patch_center_idx = patch_length ** 2 // 2
 
     for gt_path in gt_images:
         # print(gt_path)
@@ -119,15 +176,27 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
         blurred_tensor2 = core.imresize(input_tensor, scale=scale_factor)
 
         with torch.no_grad():
-            hr_coord, hr_rgb = to_pixel_samples(gt_tensor.contiguous())
-            hr_coord = hr_coord.unsqueeze(0).repeat(gt_tensor.size(0),1,1)
+            patched_hr_coord, hr_rgb = to_patch_samples(gt_tensor.contiguous())
+            patched_hr_coord = patched_hr_coord.unsqueeze(0).repeat(gt_tensor.size(0),1,1)
+            hr_coord = patched_hr_coord[..., patch_center_idx*2: (patch_center_idx+1)*2]
             cell = torch.ones_like(hr_coord)
             cell[:, :, 0] *= 2 / gt_tensor.shape[-2]
             cell[:, :, 1] *= 2 / gt_tensor.shape[-1]
             cell_factor = max(scale_factor/4, 1)
 
-            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
-            output = output.view(1,new_h,new_w,-1).permute(0,3,1,2)            
+            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), patched_hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
+            output = output.view(1,new_h,new_w,-1).permute(0,3,1,2)
+
+            # patch handling 
+            
+            n_pixels_in_patch = output.shape[1] // 3
+            output = F.pixel_shuffle(output.reshape(b, n_pixels_in_patch, 3, output.shape[2], output.shape[3]).permute(0,2,1,3,4).reshape(output.shape), upscale_factor=patch_length) # (B, 3, n*H, n*W)
+            pad_size = patch_length // 2 + 1
+            output = F.pad(output, pad=(pad_size, pad_size, pad_size, pad_size), mode='reflect')
+            kernel = torch.ones(1, 1, patch_length, patch_length) / n_pixels_in_patch
+            output = F.conv2d(output.reshape(b*3, 1, output.shape[2], output.shape[3]), kernel.to(output.device), stride=patch_length, dilation=patch_length//2+1) # (B * 3, 1, H, W)
+            output = output.reshape(b, 3, output.shape[2], output.shape[3]) # (B, 3, H, W)
+            
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
@@ -171,6 +240,9 @@ def train(train_loader, model, optimizer, epoch, config):
                         * config.get('train_dataset')['dataset']['args']['repeat'])
     iteration = 0
 
+    patch_length = config['model']['args']['patch_length']
+    patch_center_idx = patch_length ** 2 // 2
+
     descript = 'epoch : {}/{}'.format(epoch, config['epoch_max'])
     for batch in tqdm(train_loader, leave=False, desc=descript, mininterval=2):
         for k, v in batch.items():
@@ -190,7 +262,18 @@ def train(train_loader, model, optimizer, epoch, config):
         inp_size = config.get('train_dataset')['wrapper']['args']['inp_size']
         inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
         gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
-        hr_coord, hr_rgb = to_pixel_samples(gt_img.contiguous())
+
+        # if 'query_area' not in config:
+        #     query_area = 'pixel'
+        # else:
+        #     if config['query_area'] == 'pixel':
+        #         query_area = 'pixel'
+        #     elif config['query_area'] == 'patch':
+        #         query_area = 'patch'
+        # if query_area == 'pixel':
+        #     hr_coord, hr_rgb = to_pixel_samples(gt_img.contiguous())
+        # elif query_area == 'patch':
+        patched_hr_coord, hr_rgb = to_patch_samples(gt_img.contiguous(), patch_length=patch_length)
 
         # for gpu save
         if 'sample_q' not in config:
@@ -200,16 +283,17 @@ def train(train_loader, model, optimizer, epoch, config):
         if sample_q == 0:
             pass
         else:
-            sample_lst = np.random.choice(hr_coord.size(0), sample_q, replace=False)
-            hr_coord= hr_coord[sample_lst]
+            sample_lst = np.random.choice(patched_hr_coord.size(0), sample_q, replace=False)
+            patched_hr_coord= patched_hr_coord[sample_lst]
             hr_rgb= hr_rgb[:, sample_lst]
 
-        hr_coord = hr_coord.unsqueeze(0).repeat(gt_img.size(0),1,1)
+        patched_hr_coord = patched_hr_coord.unsqueeze(0).repeat(gt_img.size(0),1,1)
+        hr_coord = patched_hr_coord[..., patch_center_idx*2: (patch_center_idx+1)*2]
         cell = torch.ones_like(hr_coord)
         cell[:, :, 0] *= 2 / gt_img.shape[-2]
         cell[:, :, 1] *= 2 / gt_img.shape[-1]
 
-        pred = model(inp, hr_coord.cuda(), cell.cuda())
+        pred = model(inp, patched_hr_coord.cuda(), cell.cuda())
 
   
         loss = loss_fn(pred, hr_rgb)
