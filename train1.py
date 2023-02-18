@@ -56,6 +56,7 @@ def to_patch_samples(img, patch_length=3):
     patched_img = None
     for (h, w) in shift_list:
         shifted_img = img.clone()
+
         # h-wise shift
         if h == 0:
             pass
@@ -63,6 +64,7 @@ def to_patch_samples(img, patch_length=3):
             shifted_img[:, :, -h:, :] = shifted_img[:, :, :h, :]
         elif h > 0:
             shifted_img[:, :, :-h, :] = shifted_img[:, :, h:, :]
+        
         # w-wise shift
         if w == 0:
             pass
@@ -70,13 +72,14 @@ def to_patch_samples(img, patch_length=3):
             shifted_img[:, :, :, -w:] = shifted_img[:, :, :, :w]
         elif w > 0:
             shifted_img[:, :, :, :-w] = shifted_img[:, :, :, w:]
+        
         if patched_img == None:
             patched_img = shifted_img
         else:
             patched_img = torch.cat([patched_img, shifted_img], dim=1)
     # after the above for loop, patched_img => (B, 3*n_pixel_in_patch, H, W)
     
-    rgb_patch = patched_img.view(b, 3 * patch_length**2, -1).permute(0,2, 1)
+    rgb_patch = patched_img.view(b, 3 * patch_length**2, -1).permute(0, 2, 1)
     return coord, rgb_patch
 
 def make_data_loader(spec, tag=''):
@@ -171,7 +174,7 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
 
             if 'query_area' in config and config['query_area'] == 'patch':
                 n_pixels_in_patch = output.shape[1] // 3
-                output = F.pixel_shuffle(output.reshape(b, 3, n_pixels_in_patch, output.shape[2], output.shape[3]).permute(0,2,1,3,4).reshape(output.shape), upscale_factor=config['patch_length']) # (B, 3, n*H, n*W)
+                output = F.pixel_shuffle(output.reshape(b, n_pixels_in_patch, 3, output.shape[2], output.shape[3]).permute(0,2,1,3,4).reshape(output.shape), upscale_factor=config['patch_length']) # (B, 3, n*H, n*W)
                 pad_size = config['patch_length'] // 2 + 1
                 output = F.pad(output, pad=(pad_size, pad_size, pad_size, pad_size), mode='reflect')
                 kernel = torch.ones(1, 1, config['patch_length'], config['patch_length']) / n_pixels_in_patch
