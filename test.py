@@ -13,7 +13,7 @@ import models
 import utils
 
 
-def batched_predict(model, inp, coord, cell, bsize):
+def batched_predict(model, inp, coord, cell, bsize, config=None):
     with torch.no_grad():
         model.gen_feat(inp)
         n = coord.shape[1]

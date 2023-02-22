@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug_liif",
+            "name": "debug_bicubic",
             "type": "python",
             "request": "launch",
-            "program": "train_liif-patch.py",
+            "program": "train4.py",
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
-                "--config=configs/train_edsr-baseline-liif-patch.yaml", "--gpu=2"
+                "--config=configs/train_edsr-baseline-multi.yaml", "--gpu=0,1"
             ]
         }
     ]

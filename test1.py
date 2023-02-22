@@ -158,86 +158,6 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
     return  total_psnrs
 
 
-def train(train_loader, model, optimizer, epoch, config):
-    model.train()
-    loss_fn = nn.L1Loss()
-    train_loss = utils.Averager()
-    metric_fn = utils.calc_psnr
-
-    data_norm = config['data_norm']
-    t = data_norm['inp']
-    inp_sub = torch.FloatTensor(t['sub']).view(1, -1, 1, 1).cuda()
-    inp_div = torch.FloatTensor(t['div']).view(1, -1, 1, 1).cuda()
-    t = data_norm['gt']
-    gt_sub = torch.FloatTensor(t['sub']).view(1, 1, -1).cuda()
-    gt_div = torch.FloatTensor(t['div']).view(1, 1, -1).cuda()
-    
-    num_dataset = 800 # DIV2K
-    iter_per_epoch = int(num_dataset / config.get('train_dataset')['batch_size'] \
-                        * config.get('train_dataset')['dataset']['args']['repeat'])
-    iteration = 0
-
-    descript = 'epoch : {}/{}'.format(epoch, config['epoch_max'])
-    for batch in tqdm(train_loader, leave=False, desc=descript, mininterval=2):
-        for k, v in batch.items():
-            batch[k] = v.cuda()
-
-        # normalize
-        gt_img = (batch['gt_img'] - inp_sub) / inp_div
-    
-        if config['mode'] == 0: 
-            if 'factor_range' in config:
-                sf = random.uniform(config['factor_range'][0] ,config['factor_range'][1]) # floating point
-            else:
-                sf = random.uniform(1,4) # floating point
-        else:
-            sf = random.randint(2,4) # integer 
-
-        inp_size = config.get('train_dataset')['wrapper']['args']['inp_size']
-        inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
-        gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
-        hr_coord, hr_rgb = to_pixel_samples(gt_img.contiguous())
-
-        # for gpu save
-        if 'sample_q' not in config:
-            sample_q = 2304
-        else:
-           sample_q = config['sample_q'] 
-        if sample_q == 0:
-            pass
-        else:
-            sample_lst = np.random.choice(hr_coord.size(0), sample_q, replace=False)
-            hr_coord= hr_coord[sample_lst]
-            hr_rgb= hr_rgb[:, sample_lst]
-
-        hr_coord = hr_coord.unsqueeze(0).repeat(gt_img.size(0),1,1)
-        cell = torch.ones_like(hr_coord)
-        cell[:, :, 0] *= 2 / gt_img.shape[-2]
-        cell[:, :, 1] *= 2 / gt_img.shape[-1]
-
-        pred = model(inp, hr_coord.cuda(), cell.cuda())
-
-  
-        loss = loss_fn(pred, hr_rgb)
-        psnr = metric_fn(pred, hr_rgb)
-        
-        # tensorboard
-        writer.add_scalars('loss', {'train': loss.item()}, (epoch-1)*iter_per_epoch + iteration)
-        writer.add_scalars('psnr', {'train': psnr}, (epoch-1)*iter_per_epoch + iteration)
-        iteration += 1
-        
-        train_loss.add(loss.item())
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        pred = None; loss = None
-        
-        
-        
-    return train_loss.item()
-
 
 def main(config_, save_path):
     global config, log, writer
@@ -259,82 +179,40 @@ def main(config_, save_path):
     if n_gpus > 1:
         model = nn.parallel.DataParallel(model)
 
-    epoch_max = config['epoch_max']
-    epoch_val = config.get('epoch_val')
-    epoch_save = config.get('epoch_save')
     max_val_v = -1e18
 
     timer = utils.Timer()
+    
+    log_info = ['']
 
     if n_gpus > 1:
         model_ = model.module
     else:
         model_ = model
-    # test eval
-    eval(model_, 'Set5', save_path, scale_factor=4, config=config)
 
-    for epoch in range(epoch_start, epoch_max + 1):
     
-        t_epoch_start = timer.t()
-        log_info = ['epoch {}/{}'.format(epoch, epoch_max)]
-
-        writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
-
-        train_loss = train(train_loader, model, optimizer, epoch, config)
-        if lr_scheduler is not None:
-            lr_scheduler.step()
-
-        log_info.append('train: loss={:.4f}'.format(train_loss))
-        log_info.append('lr={:.4e}'.format(optimizer.param_groups[0]['lr']))
-#         writer.add_scalars('loss', {'train': train_loss}, epoch)
-
-        model_spec = config['model']
-        model_spec['sd'] = model_.state_dict()
-        optimizer_spec = config['optimizer']
-        optimizer_spec['sd'] = optimizer.state_dict()
-        sv_file = {
-            'model': model_spec,
-            'optimizer': optimizer_spec,
-            'epoch': epoch
-        }
-
-        torch.save(sv_file, os.path.join(save_path, 'epoch-last.pth'))
-
-        if (epoch_save is not None) and (epoch % epoch_save == 0):
-            torch.save(sv_file,
-                os.path.join(save_path, 'epoch-{}.pth'.format(epoch)))
-
-        if (epoch_val is not None) and (epoch % epoch_val == 0):
-            if n_gpus > 1 and (config.get('eval_bsize') is not None):
-                model_ = model.module
-            else:
-                model_ = model
+    if n_gpus > 1 and (config.get('eval_bsize') is not None):
+        model_ = model.module
+    else:
+        model_ = model
 
 
-            scale_factors = [2,3,4,6,8,12]
-            model.eval()
+    scale_factors = [2,3,4,6,8,12]
+    model.eval()
 
-            for sf in scale_factors:
-                val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf, config=config)
-                val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf, config=config)
-                if sf == 4:
-                    val_sf4 = val_res_set14
-                log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
+    for sf in scale_factors:
+        val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf, config=config)
+        val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf, config=config)
+        if sf == 4:
+            val_sf4 = val_res_set14
+        log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
 
 
-            model.train()
-            if val_sf4 > max_val_v:
-                max_val_v = val_sf4
-                torch.save(sv_file, os.path.join(save_path, 'epoch-best.pth'))
+    t = timer.t()
+    # log_info.append('{} {}/{}'.format(t_epoch, t_elapsed, t_all))
 
-        t = timer.t()
-        prog = (epoch - epoch_start + 1) / (epoch_max - epoch_start + 1)
-        t_epoch = utils.time_text(t - t_epoch_start)
-        t_elapsed, t_all = utils.time_text(t), utils.time_text(t / prog)
-        log_info.append('{} {}/{}'.format(t_epoch, t_elapsed, t_all))
-
-        log(', '.join(log_info))
-        writer.flush()
+    log(', '.join(log_info))
+    writer.flush()
 
         
 if __name__ == '__main__':

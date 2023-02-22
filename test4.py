@@ -13,6 +13,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
 import torch.nn.functional as F
+import torchvision
 
 import datasets
 import models
@@ -20,6 +21,7 @@ import utils
 
 import random
 from bicubic_pytorch import core
+import cv2
 
 # from utils import to_pixel_samples
 
@@ -134,10 +136,19 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
                            mode='test')
             output = output * 0.5 + 0.5
 
+        if 'output_sharpening' in config and config['output_sharpening']:
+            output = torchvision.transforms.functional.adjust_sharpness(output, 1.0)
+
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
+        if 'output_bilateral' in config and config['output_bilateral']:
+            output_img = cv2.bilateralFilter(output_img, -1, 10, 5)
         input_img1 = utils.tensor2numpy(blurred_tensor1[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])
         input_img2 = utils.tensor2numpy(blurred_tensor2[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
         gt_img = utils.tensor2numpy(gt_tensor[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
+        output_error = gt_img - output_img
+        input1_error = gt_img - input_img1
+        input2_error = gt_img - input_img2
+        gt_error = gt_img - gt_img # zero map
         psnr = utils.psnr_measure(output_img, gt_img)
 
         img_files = glob.glob(f"{save_path}/{filename}_{scale_factor}*")
@@ -145,6 +156,8 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
             os.remove(f)
 
         canvas = np.concatenate((input_img1, input_img2, output_img, gt_img), 1)
+        canvas_error = np.concatenate((input1_error, input2_error, output_error, gt_error), 1)
+        canvas = np.concatenate((canvas, canvas_error), 0)
         utils.save_img_np(canvas, '{}/{}_{}_{:.2f}.png'.format(save_path, filename, scale_factor, psnr))
 
         total_psnrs.append(psnr)

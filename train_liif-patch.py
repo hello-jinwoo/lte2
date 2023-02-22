@@ -22,11 +22,10 @@ from test import batched_predict
 
 import random
 from bicubic_pytorch import core
+import math
 
 
 # from utils import to_pixel_samples
-
-
 
 
 def to_pixel_samples(img):
@@ -184,19 +183,26 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
             cell[:, :, 1] *= 2 / gt_tensor.shape[-1]
             cell_factor = max(scale_factor/4, 1)
 
-            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), patched_hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
+            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), patched_hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000, config=config)
             output = output.view(1,new_h,new_w,-1).permute(0,3,1,2)
 
             # patch handling 
-            
             n_pixels_in_patch = output.shape[1] // 3
             output = F.pixel_shuffle(output.reshape(b, n_pixels_in_patch, 3, output.shape[2], output.shape[3]).permute(0,2,1,3,4).reshape(output.shape), upscale_factor=patch_length) # (B, 3, n*H, n*W)
             pad_size = patch_length // 2 + 1
             output = F.pad(output, pad=(pad_size, pad_size, pad_size, pad_size), mode='reflect')
-            kernel = torch.ones(1, 1, patch_length, patch_length) / n_pixels_in_patch
+            if 'patch_fusion_kernel' not in config or config['patch_fusion_kernel'] == 'avg':
+                # default avg
+                kernel = torch.ones(1, 1, patch_length, patch_length) / n_pixels_in_patch
+            elif config['patch_fusion_kernel'] == 'center':
+                kernel = torch.zeros(1, 1, patch_length, patch_length)
+                kernel[:, :, patch_length // 2, patch_length // 2] = 1.
+            elif config['patch_fusion_kernel'] == 'gaussian':
+                pass
+            
             output = F.conv2d(output.reshape(b*3, 1, output.shape[2], output.shape[3]), kernel.to(output.device), stride=patch_length, dilation=patch_length//2+1) # (B * 3, 1, H, W)
             output = output.reshape(b, 3, output.shape[2], output.shape[3]) # (B, 3, H, W)
-            
+
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
@@ -224,6 +230,7 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
 def train(train_loader, model, optimizer, epoch, config):
     model.train()
     loss_fn = nn.L1Loss()
+    loss_fn_cos = nn.CosineEmbeddingLoss()
     train_loss = utils.Averager()
     metric_fn = utils.calc_psnr
 
@@ -295,8 +302,10 @@ def train(train_loader, model, optimizer, epoch, config):
 
         pred = model(inp, patched_hr_coord.cuda(), cell.cuda())
 
-  
         loss = loss_fn(pred, hr_rgb)
+        if 'cos_loss' in config and config['cos_loss']:
+            for i in range(patch_length):
+                loss = loss + loss_fn_cos(pred[..., i*3: (i+1)*3].reshape(-1, 3), hr_rgb[..., i*3: (i+1)*3].reshape(-1, 3), target=torch.ones(hr_rgb.shape[0] * hr_rgb.shape[1]).to(pred.device)) / patch_length
         psnr = metric_fn(pred, hr_rgb)
         
         # tensorboard
@@ -348,6 +357,7 @@ def main(config_, save_path):
         model_ = model.module
     else:
         model_ = model
+            
     # test eval
     eval(model_, 'Set5', save_path, scale_factor=4, config=config)
 
