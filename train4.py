@@ -329,11 +329,15 @@ def main(config_, save_path):
             model.eval()
 
             for sf in scale_factors:
-                val_res_set14 = eval(model, 'Set14', save_path, scale_factor=sf, config=config)
-                val_res_set5 = eval(model, 'Set5', save_path, scale_factor=sf, config=config)
+                val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf, config=config)
+                val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf, config=config)
+                if epoch % (epoch_save * 10) == 0:
+                    val_res_div = eval(model, 'DIV2K_train_Set10', save_path, scale_factor=sf, config=config)
+                    log_info.append('SF{}:{:.4f}/{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14, val_res_div))
+                else:
+                    log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
                 if sf == 4:
                     val_sf4 = val_res_set14
-                log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
 
 
             model.train()

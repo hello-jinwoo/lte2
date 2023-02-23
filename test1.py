@@ -203,9 +203,10 @@ def main(config_, save_path):
     for sf in scale_factors:
         val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf, config=config)
         val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf, config=config)
+        val_res_div = eval(model_, 'DIV2K_train_Set10', save_path, scale_factor=sf, config=config)
         if sf == 4:
             val_sf4 = val_res_set14
-        log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
+        log_info.append('SF{}:{:.4f}/{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14, val_res_div))
 
 
     t = timer.t()

@@ -9,22 +9,22 @@ import imageio.v2 as imageio
 import yaml
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
+import torch.nn.functional as F
 
 import datasets
 import models
 import utils
-# from test import eval_psnr
-from test import batched_predict
 
 import random
 from bicubic_pytorch import core
 
 
 # from utils import to_pixel_samples
+
+
 
 
 
@@ -54,9 +54,9 @@ def make_data_loader(spec, tag=''):
         shuffle=(tag == 'train'), num_workers=8, pin_memory=True)
     return loader
 
+
 def make_data_loaders():
     train_loader = make_data_loader(config.get('train_dataset'), tag='train')
-    # val_loader = make_data_loader(config.get('val_dataset'), tag='val')
     return train_loader
 
 
@@ -97,6 +97,7 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
 
     save_path = os.path.join(save_dir,  data_name)
     os.makedirs(save_path, exist_ok=True)
+
     total_psnrs = []
 
     for gt_path in gt_images:
@@ -111,23 +112,31 @@ def eval(model, data_name, save_dir, scale_factor=4, config=None):
         # new_h, new_w = h - h % self.args.size_must_mode, w - w % self.args.size_must_mode
         # gt = gt[:new_h, :new_w, :]
         gt_tensor = utils.numpy2tensor(gt).cuda()
-        gt_tensor, pad = utils.pad_img(gt_tensor, 24*scale_factor)#self.args.size_must_mode*self.args.scale)
-        b, _, new_h, new_w = gt_tensor.size()
+        gt_tensor, pad = utils.pad_img(gt_tensor, int(24*scale_factor))#self.args.size_must_mode*self.args.scale)
+        _,_, new_h, new_w = gt_tensor.size()
         input_tensor = core.imresize(gt_tensor, scale=1/scale_factor)
-        # blurred_tensor = core.imresize(input_tensor, scale=scale_factor)
         blurred_tensor1 = F.interpolate(input_tensor, scale_factor=scale_factor, mode='nearest')
         blurred_tensor2 = core.imresize(input_tensor, scale=scale_factor)
+        # if type(config['model']['args']['upsample_mode']) == str:
+        #     input_tensor = F.interpolate(gt_tensor, 
+        #         scale_factor=1/scale_factor, 
+        #         mode=config['model']['args']['upsample_mode'])
+        #     blurred_tensor = F.interpolate(input_tensor, 
+        #         scale_factor=scale_factor, 
+        #         mode=config['model']['args']['upsample_mode'])
+        # else:
+        #     input_tensor = F.interpolate(gt_tensor, 
+        #         scale_factor=1/scale_factor, 
+        #         mode='bicubic')
+        #     blurred_tensor = F.interpolate(input_tensor, 
+        #         scale_factor=scale_factor, 
+        #         mode='bicubic')
 
         with torch.no_grad():
-            hr_coord, hr_rgb = to_pixel_samples(gt_tensor.contiguous())
-            hr_coord = hr_coord.unsqueeze(0).repeat(gt_tensor.size(0),1,1)
-            cell = torch.ones_like(hr_coord)
-            cell[:, :, 0] *= 2 / gt_tensor.shape[-2]
-            cell[:, :, 1] *= 2 / gt_tensor.shape[-1]
-            cell_factor = max(scale_factor/4, 1)
-
-            output = batched_predict(model, ((input_tensor - 0.5) / 0.5), hr_coord.cuda(), cell_factor*cell.cuda(), bsize=30000)
-            output = output.view(1,new_h,new_w,-1).permute(0,3,1,2)            
+            output = model(x=(input_tensor - 0.5) / 0.5, 
+                           scale_factor=None, 
+                           size=(new_h, new_w),
+                           mode='test')
             output = output * 0.5 + 0.5
 
         output_img = utils.tensor2numpy(output[0:1,:, pad[2]:new_h-pad[3], pad[0]:new_w-pad[1]])            
@@ -176,7 +185,7 @@ def train(train_loader, model, optimizer, epoch, config):
     iter_per_epoch = int(num_dataset / config.get('train_dataset')['batch_size'] \
                         * config.get('train_dataset')['dataset']['args']['repeat'])
     iteration = 0
-
+    
     descript = 'epoch : {}/{}'.format(epoch, config['epoch_max'])
     for batch in tqdm(train_loader, leave=False, desc=descript, mininterval=2):
         for k, v in batch.items():
@@ -185,41 +194,49 @@ def train(train_loader, model, optimizer, epoch, config):
         # normalize
         gt_img = (batch['gt_img'] - inp_sub) / inp_div
     
-        if config['mode'] == 0: 
-            if 'factor_range' in config:
-                sf = random.uniform(config['factor_range'][0] ,config['factor_range'][1]) # floating point
-            else:
-                sf = random.uniform(1,4) # floating point
-        else:
-            sf = random.randint(2,4) # integer 
 
+        # if config['mode'] == 0: 
+        #     sf = random.uniform(1,4) # floating point
+        # else:
+        #     sf = random.randint(2,4) # integer 
+        # sf = 4
+        if config['scale']['mode'] == 'fixed':
+            sf = config['scale']['factor']
+        elif config['scale']['mode'] == 'multi_fixed':
+            sf = random.choice(config['scale']['factor_list'])
+        elif config['scale']['mode'] == 'multi_arbitrary':
+            sf = random.uniform(config['scale']['factor_range'][0], config['scale']['factor_range'][1])
+        else:
+            sf = random.uniform(1, 4)
+
+        # with torch.no_grad():
         inp_size = config.get('train_dataset')['wrapper']['args']['inp_size']
         inp = core.imresize(gt_img, sizes=(inp_size,inp_size))
         gt_img = core.imresize(gt_img, sizes=(round(inp_size*sf),round(inp_size*sf)))
-        hr_coord, hr_rgb = to_pixel_samples(gt_img.contiguous())
+        # if type(config['model']['args']['upsample_mode']) == str:
+        #     inp = F.interpolate(gt_img, 
+        #         size=(inp_size,inp_size), 
+        #         mode=config['model']['args']['upsample_mode'])
+        #     gt_img = F.interpolate(gt_img, 
+        #         size=(round(inp_size*sf),round(inp_size*sf)), 
+        #         mode=config['model']['args']['upsample_mode'])
+        # else:
+        #     inp = F.interpolate(gt_img, 
+        #         size=(inp_size,inp_size), 
+        #         mode='bicubic')
+        #     gt_img = F.interpolate(gt_img, 
+        #         size=(round(inp_size*sf),round(inp_size*sf)), 
+        #         mode='bicubic')
+        
 
-        # for gpu save
-        if 'sample_q' not in config:
-            sample_q = 2304
-        else:
-           sample_q = config['sample_q'] 
-        if sample_q == 0:
-            pass
-        else:
-            sample_lst = np.random.choice(hr_coord.size(0), sample_q, replace=False)
-            hr_coord= hr_coord[sample_lst]
-            hr_rgb= hr_rgb[:, sample_lst]
+        pred = model(inp, scale_factor=None, size=(round(inp_size*sf),round(inp_size*sf)), mode='train')
 
-        hr_coord = hr_coord.unsqueeze(0).repeat(gt_img.size(0),1,1)
-        cell = torch.ones_like(hr_coord)
-        cell[:, :, 0] *= 2 / gt_img.shape[-2]
-        cell[:, :, 1] *= 2 / gt_img.shape[-1]
+        random_mask = torch.rand_like(pred).to(pred.device)
+        random_mask = (random_mask > config['error_random_pixel_rate']).float()
 
-        pred = model(inp, hr_coord.cuda(), cell.cuda())
-
-  
-        loss = loss_fn(pred, hr_rgb)
-        psnr = metric_fn(pred, hr_rgb)
+        loss = loss_fn(pred * random_mask, gt_img * random_mask)
+        loss = loss / config['error_random_pixel_rate']
+        psnr = metric_fn(pred, gt_img)
         
         # tensorboard
         writer.add_scalars('loss', {'train': loss.item()}, (epoch-1)*iter_per_epoch + iteration)
@@ -234,8 +251,6 @@ def train(train_loader, model, optimizer, epoch, config):
 
         pred = None; loss = None
         
-        
-        
     return train_loss.item()
 
 
@@ -246,7 +261,7 @@ def main(config_, save_path):
     with open(os.path.join(save_path, 'config.yaml'), 'w') as f:
         yaml.dump(config, f, sort_keys=False)
 
-    train_loader = make_data_loaders()
+    train_loader  = make_data_loaders()
     if config.get('data_norm') is None:
         config['data_norm'] = {
             'inp': {'sub': [0], 'div': [1]},
@@ -266,15 +281,7 @@ def main(config_, save_path):
 
     timer = utils.Timer()
 
-    if n_gpus > 1:
-        model_ = model.module
-    else:
-        model_ = model
-    # test eval
-    eval(model_, 'Set5', save_path, scale_factor=4, config=config)
-
     for epoch in range(epoch_start, epoch_max + 1):
-    
         t_epoch_start = timer.t()
         log_info = ['epoch {}/{}'.format(epoch, epoch_max)]
 
@@ -288,6 +295,10 @@ def main(config_, save_path):
         log_info.append('lr={:.4e}'.format(optimizer.param_groups[0]['lr']))
 #         writer.add_scalars('loss', {'train': train_loss}, epoch)
 
+        if n_gpus > 1:
+            model_ = model.module
+        else:
+            model_ = model
         model_spec = config['model']
         model_spec['sd'] = model_.state_dict()
         optimizer_spec = config['optimizer']
@@ -310,8 +321,14 @@ def main(config_, save_path):
             else:
                 model_ = model
 
-
-            scale_factors = [2,3,4,6,8,12]
+            if config['scale']['mode'] == 'fixed':
+                if config['scale']['factor'] == 1:
+                    # scale_factors = [1, 1.25, 1.5, 1.75, 2, 3, 4]
+                    scale_factors = [1.]
+                else:
+                    scale_factors = [2, 3, 4]
+            else:
+                scale_factors = [2, 2.5, 3, 3.5, 4, 6, 12]
             model.eval()
 
             for sf in scale_factors:
@@ -324,13 +341,13 @@ def main(config_, save_path):
                     log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
                 if sf == 4:
                     val_sf4 = val_res_set14
-                
 
 
             model.train()
-            if val_sf4 > max_val_v:
-                max_val_v = val_sf4
-                torch.save(sv_file, os.path.join(save_path, 'epoch-best.pth'))
+            if 4 in scale_factors:
+                if val_sf4 > max_val_v:
+                    max_val_v = val_sf4
+                    torch.save(sv_file, os.path.join(save_path, 'epoch-best.pth'))
 
         t = timer.t()
         prog = (epoch - epoch_start + 1) / (epoch_max - epoch_start + 1)
@@ -341,13 +358,13 @@ def main(config_, save_path):
         log(', '.join(log_info))
         writer.flush()
 
-        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
     parser.add_argument('--name', default=None)
     parser.add_argument('--tag', default=None)
     parser.add_argument('--gpu', default='0')
+
     # parser.add_argument('--version', default='v1', type=str)
 
     args = parser.parse_args()

@@ -89,7 +89,6 @@ def prepare_training():
 def eval(model, data_name, save_dir, scale_factor=4, config=None):
     model.eval()
     test_path = './load/' + data_name + '/HR'
-
     gt_images = sorted(glob.glob(test_path + '/*.png'))
 
     save_path = os.path.join(save_dir,  data_name)
@@ -200,9 +199,10 @@ def main(config_, save_path):
     for sf in scale_factors:
         val_res_set14 = eval(model, 'Set14', save_path, scale_factor=sf, config=config)
         val_res_set5 = eval(model, 'Set5', save_path, scale_factor=sf, config=config)
+        val_res_div = eval(model, 'DIV2K_train_Set10', save_path, scale_factor=sf, config=config)
         if sf == 4:
             val_sf4 = val_res_set14
-        log_info.append('SF{}:{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14))
+        log_info.append('SF{}:{:.4f}/{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14, val_res_div))
     
     log(', '.join(log_info))
 
