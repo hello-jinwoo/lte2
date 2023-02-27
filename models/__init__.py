@@ -18,4 +18,4 @@ from . import edsr_sa, edsr_sa2, edsr_sa3, edsr_sa4
 from . import liif_sa, liif_sa_weighting
 from . import liif_patch, liif_patch2
 from . import edsr_mlp_dec
-from . import edsr_pattern, edsr_pattern2
+from . import edsr_pattern, edsr_pattern2, edsr_pattern3, edsr_pattern4
