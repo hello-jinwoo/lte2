@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from models import register
 
 '''
-v4 : decoder as original edsr, but different kernel_size (orig: 3, pattern_v4 : 1)
+v5 : decoder as original edsr
 '''
 
 
@@ -132,9 +132,9 @@ class EDSR(nn.Module):
             self.out_dim = args.n_colors
             # define tail module
             n_patterns = len(args.pattern_types) * 2
-            self.tail = nn.Sequential(nn.Conv2d(n_feats + n_patterns, n_feats, 1),
+            self.tail = nn.Sequential(nn.Conv2d(n_feats + n_patterns, n_feats, 3, 1, 1),
                                       nn.LeakyReLU(inplace=True), 
-                                      nn.Conv2d(n_feats, self.out_dim, 1))
+                                      nn.Conv2d(n_feats, self.out_dim, 3, 1, 1))
             
     
     def imresize(self, x, scale_factor=None, size=None):
@@ -279,7 +279,7 @@ class EDSR(nn.Module):
                                    .format(name))
 
 
-@register('edsr-tiny-pattern4')
+@register('edsr-tiny-pattern5')
 def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     pattern_types=[], max_pattern_size=4):
@@ -299,7 +299,7 @@ def make_edsr_tiny(n_resblocks=8, n_feats=16, res_scale=1, scale=2,
     args.max_pattern_size = max_pattern_size
     return EDSR(args)
 
-@register('edsr-light-pattern4')
+@register('edsr-light-pattern5')
 def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2, 
                     no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                     pattern_types=[], max_pattern_size=4):
@@ -320,7 +320,7 @@ def make_edsr_light(n_resblocks=16, n_feats=32, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-baseline-pattern4')
+@register('edsr-baseline-pattern5')
 def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2, 
                        no_upsampling=False, upsample_mode='bicubic',rgb_range=1,
                        pattern_types=[], max_pattern_size=4):
@@ -341,7 +341,7 @@ def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1, scale=2,
     return EDSR(args)
 
 
-@register('edsr-pattern4')
+@register('edsr-pattern5')
 def make_edsr(n_resblocks=32, n_feats=256, res_scale=0.1, scale=2, 
               no_upsampling=False, upsample_mode='bicubic', rgb_range=1,
               pattern_types=[], max_pattern_size=4):
