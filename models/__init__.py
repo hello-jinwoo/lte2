@@ -15,7 +15,7 @@ from . import decnet1, decnet2
 from . import salwnet1, salwnet1_1, salwnet2, salwnet3, salwnet4, salwnet5, salwnet5_1, salwnet6, salwnet7, salwnet8
 from . import liif_geo, liif_geo2, liif_geo3
 from . import edsr_sa, edsr_sa2, edsr_sa3, edsr_sa4
-from . import liif_sa, liif_sa_weighting
+from . import liif_sa, liif_sa_weighting, liif_sa_weighting2
 from . import liif_patch, liif_patch2
 from . import edsr_mlp_dec
 from . import edsr_pattern, edsr_pattern2, edsr_pattern3, edsr_pattern4, edsr_pattern5

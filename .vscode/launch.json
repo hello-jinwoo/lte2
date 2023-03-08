@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug_pattern",
+            "name": "debug",
             "type": "python",
             "request": "launch",
-            "program": "train4.py",
+            "program": "train1.py",
             "console": "integratedTerminal",
             "justMyCode": true, 
             "args": [
-                "--config=configs/train_edsr-baseline-multi_pattern.yaml", "--gpu=2,3"
+                "--config=configs/train_edsr-baseline-sa2-weighting2-liif.yaml", "--gpu=2,3"
             ]
         }
     ]
