@@ -126,6 +126,7 @@ class LIIF(nn.Module):
             diagonal_mask = 1 - torch.eye(slots_self_attn_map.shape[-1]).to(slots_self_attn_map.device) # (4, 4)
             ensemble_weights = slots_self_attn_map * diagonal_mask[None, None, :, :] # masking diagonal
             ensemble_weights = torch.mean(ensemble_weights, dim=-1) # (B, N, 4)
+            ensemble_weights = ensemble_weights / torch.sum(ensemble_weights, dim=-1, keepdim=True)
             
             ret = 0
             for i, pred in enumerate(preds):
