@@ -91,10 +91,16 @@ def prepare_training():
 
 def eval(model, data_name, save_dir, scale_factor=4, config=None):
     model.eval()
-    test_path = './load/' + data_name + '/HR'
 
-    gt_images = sorted(glob.glob(test_path + '/*.png'))
-
+    if "set" in data_name.lower():
+        test_path = './load/' + data_name + '/HR'
+        gt_images = sorted(glob.glob(test_path + '/*.png'))
+    elif "bsd" in data_name.lower():
+        gt_images = sorted(glob.glob('./load/BSD100/image_SRF_2/*HR.png'))
+    elif "urban" in data_name.lower():
+        gt_images = sorted(glob.glob('./load/Urban100/image_SRF_2/*HR.png'))
+    elif "manga" in data_name.lower():
+        gt_images = sorted(glob.glob('./load/manga109/*.png'))
     save_path = os.path.join(save_dir,  data_name)
     os.makedirs(save_path, exist_ok=True)
     total_psnrs = []
@@ -203,10 +209,15 @@ def main(config_, save_path):
     for sf in scale_factors:
         val_res_set14 = eval(model_, 'Set14', save_path, scale_factor=sf, config=config)
         val_res_set5 = eval(model_, 'Set5', save_path, scale_factor=sf, config=config)
-        val_res_div = eval(model_, 'DIV2K_train_Set10', save_path, scale_factor=sf, config=config)
+        # val_res_div = eval(model_, 'DIV2K_train_Set10', save_path, scale_factor=sf, config=config)
+        val_res_bsd100 = eval(model_, 'bsd100', save_path, scale_factor=sf, config=config)
+        val_res_urban100 = eval(model_, 'urban100', save_path, scale_factor=sf, config=config)
+        val_res_manga109 = eval(model_, 'manga109', save_path, scale_factor=sf, config=config)
         if sf == 4:
             val_sf4 = val_res_set14
-        log_info.append('SF{}:{:.4f}/{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14, val_res_div))
+        # log_info.append('SF{}:{:.4f}/{:.4f}/{:.4f}/'.format(sf,val_res_set5, val_res_set14, val_res_div))
+        log_info.append('SF{}:{:.4f}/{:.4f}/{:.4f}/{:.4f}/{:.4f}'.format(sf,val_res_set5, val_res_set14, val_res_bsd100, val_res_urban100, val_res_manga109))
+        # log_info.append('SF{}:{:.4f}'.format(sf,val_res_manga109))
 
 
     t = timer.t()
